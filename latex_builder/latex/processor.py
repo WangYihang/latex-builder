@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from latex_builder.utils.logging import get_logger
-from latex_builder.utils.command import run_command
+from latex_builder.utils.command import run_latex_command
 
 logger = get_logger(__name__)
 
@@ -101,22 +101,22 @@ class LaTeXProcessor:
         
         logger.info(f"Running {compiler} first pass")
         cmd_start = time.time()
-        run_command([compiler, "-shell-escape", tex_file], cwd)
+        run_latex_command([compiler, "-shell-escape", tex_file], cwd)
         logger.debug(f"{compiler} first pass completed", duration=f"{time.time() - cmd_start:.2f}s")
         
         logger.info("Running bibtex")
         cmd_start = time.time()
-        run_command(["bibtex", basename], cwd)
+        run_latex_command(["bibtex", basename], cwd)
         logger.debug("bibtex completed", duration=f"{time.time() - cmd_start:.2f}s")
         
         logger.info(f"Running {compiler} second pass")
         cmd_start = time.time()
-        run_command([compiler, "-shell-escape", tex_file], cwd)
+        run_latex_command([compiler, "-shell-escape", tex_file], cwd)
         logger.debug(f"{compiler} second pass completed", duration=f"{time.time() - cmd_start:.2f}s")
         
         logger.info(f"Running {compiler} final pass")
         cmd_start = time.time()
-        run_command([compiler, "-shell-escape", tex_file], cwd)
+        run_latex_command([compiler, "-shell-escape", tex_file], cwd)
         logger.debug(f"{compiler} final pass completed", duration=f"{time.time() - cmd_start:.2f}s")
         
         logger.info("LaTeX compilation sequence completed", tex_file=tex_file, compiler=compiler)
