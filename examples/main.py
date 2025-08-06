@@ -5,7 +5,7 @@ from pathlib import Path
 from git import Repo
 
 
-a = """\documentclass{article}
+a = r"""\documentclass{article}
 \title{Tom Hejda's solution}
 \author{me}
 \date{May 2024}
