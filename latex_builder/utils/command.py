@@ -36,84 +36,34 @@ def run_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) 
             'TEXMFVAR': '/dev/null'
         })
         
-        process = subprocess.Popen(
+        # 使用subprocess.run，更简单直接
+        result = subprocess.run(
             cmd,
             cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            env=env,
+            capture_output=True,
             text=True,
-            bufsize=1,
-            env=env
+            timeout=timeout
         )
-
-        stdout_lines = []
-        stderr_lines = []
-        start_time = time.time()
-
-        while True:
-            # 检查超时
-            if time.time() - start_time > timeout:
-                logger.error("Command timed out", command=cmd_str, timeout=timeout)
-                process.terminate()
-                try:
-                    process.wait(timeout=10)  # 给进程10秒来优雅退出
-                except subprocess.TimeoutExpired:
-                    process.kill()  # 强制终止
-                raise RuntimeError(f"Command timed out after {timeout} seconds: {cmd_str}")
-
-            stdout_line = process.stdout.readline() if process.stdout else ""
-            stderr_line = process.stderr.readline() if process.stderr else ""
-
-            if stdout_line:
-                logger.debug(
-                    "Command output", stream="stdout", line=stdout_line.rstrip()
-                )
-                stdout_lines.append(stdout_line)
-
-            if stderr_line:
-                logger.debug(
-                    "Command output", stream="stderr", line=stderr_line.rstrip()
-                )
-                stderr_lines.append(stderr_line)
-
-            # 检查进程是否结束
-            if not stdout_line and not stderr_line and process.poll() is not None:
-                break
-
-            # 短暂休眠避免CPU占用过高
-            time.sleep(0.1)
-
-        # 获取剩余输出
-        remaining_stdout, remaining_stderr = process.communicate()
-        if remaining_stdout:
-            logger.debug(
-                "Command output", stream="stdout", line=remaining_stdout.rstrip()
-            )
-            stdout_lines.append(remaining_stdout)
-        if remaining_stderr:
-            logger.debug(
-                "Command output", stream="stderr", line=remaining_stderr.rstrip()
-            )
-            stderr_lines.append(remaining_stderr)
-
+        
         # 检查退出码
-        if process.returncode != 0:
-            stderr_output = "".join(stderr_lines).strip()
+        if result.returncode != 0:
+            stderr_output = result.stderr.strip() if result.stderr else ""
             logger.error(
                 "Command failed", 
                 command=cmd_str, 
-                exit_code=process.returncode,
+                exit_code=result.returncode,
                 stderr=stderr_output
             )
             
             # 提供更详细的错误信息
-            error_msg = f"Command failed with exit code {process.returncode}: {cmd_str}"
+            error_msg = f"Command failed with exit code {result.returncode}: {cmd_str}"
             if stderr_output:
                 error_msg += f"\nError output: {stderr_output}"
             
             raise RuntimeError(error_msg)
 
-        return "".join(stdout_lines).strip()
+        return result.stdout.strip()
         
     except subprocess.TimeoutExpired:
         logger.error("Command timed out", command=cmd_str, timeout=timeout)
