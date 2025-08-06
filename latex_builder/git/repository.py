@@ -147,11 +147,7 @@ class GitRepository:
 
             if not all_tags:
                 logger.warning("  • No tags found in the repository")
-                first_commit = next(self.repo.iter_commits(max_parents=0))
-                logger.info(
-                    f"  • Using first commit as base: {first_commit.hexsha[:7]}"
-                )
-                return GitRevision(commit_hash=first_commit.hexsha)
+                return None
 
             # Sort tags by commit date (newest first)
             sorted_tags = sorted(
@@ -171,13 +167,11 @@ class GitRepository:
                     )
                     return GitRevision(commit_hash=tag.commit.hexsha, tag_name=tag.name)
 
-            # If all tags point to current commit, use first commit
+            # If all tags point to current commit, return None
             logger.info(
-                "  • All tags point to current commit, using first commit as base"
+                "  • All tags point to current commit, no previous tag available"
             )
-            first_commit = next(self.repo.iter_commits(max_parents=0))
-            logger.info(f"  • Using first commit: {first_commit.hexsha[:7]}")
-            return GitRevision(commit_hash=first_commit.hexsha)
+            return None
 
         except Exception as e:
             logger.warning(f"  • Error finding previous tag: {repr(e)}")
