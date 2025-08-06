@@ -9,7 +9,17 @@ A Python tool for building LaTeX documents with Git version management and autom
 - **Diff Generation**: Create visual differences between Git versions using latexdiff
 - **Version Management**: Generate version information files for LaTeX documents
 - **Clear Logging**: Beautiful command-line interface with clear progress indicators
+- **GoReleaser-like Versioning**: Smart version naming based on Git tags and working tree status
 
+## Version Naming Logic
+
+The tool uses GoReleaser-like version naming:
+
+- **Tag commits**: `{tag}-{commit}` (e.g., `v1.2.3-a1b2c3d`)
+- **Non-tag commits**: `{next_version}-snapshot-{commit}` (e.g., `v1.2.4-snapshot-a1b2c3d`)
+- **Dirty working tree**: `{version}-dirty-{commit}` (e.g., `v1.2.4-dirty-a1b2c3d`)
+
+Where `{next_version}` is the patch-bumped version of the latest semantic version tag.
 
 ## Usage
 

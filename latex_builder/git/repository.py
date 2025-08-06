@@ -1,4 +1,4 @@
-"""Git repository operations and management."""
+"""Git repository operations and utilities."""
 
 import os
 import shutil
@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import git
+import semver
 
 from latex_builder.git.revision import GitRevision
 from latex_builder.utils.logging import get_logger
@@ -16,27 +17,24 @@ logger = get_logger(__name__)
 
 
 class GitRepository:
-    """Handle Git repository operations."""
+    """Git repository operations."""
 
     def __init__(self, repo_path: Optional[Path] = None):
-        """Initialize GitRepository.
+        """Initialize Git repository.
 
         Args:
-            repo_path: Path to Git repository, defaults to current directory
-
-        Raises:
-            ValueError: If path is not a valid Git repository
+            repo_path: Path to Git repository (default: current directory)
         """
+        self.repo_path = repo_path or Path.cwd()
+        logger.info("Initializing Git repository", path=str(self.repo_path))
+
         try:
-            self.repo_path = repo_path or Path.cwd()
-            logger.info("Initializing Git repository", path=str(self.repo_path))
             self.repo = git.Repo(self.repo_path)
             logger.info(
-                "Git repository initialized successfully", git_dir=self.repo.git_dir
+                "Git repository initialized successfully",
+                path=str(self.repo_path),
+                active_branch=self.repo.active_branch.name if not self.repo.head.is_detached else "detached",
             )
-        except git.InvalidGitRepositoryError:
-            logger.error("Invalid Git repository", path=str(self.repo_path))
-            raise ValueError(f"{self.repo_path} is not a valid Git repository")
         except Exception as e:
             logger.error(
                 "Git repository initialization failed",
@@ -44,6 +42,113 @@ class GitRepository:
                 error=str(e),
             )
             raise ValueError(f"Error initializing Git repository: {repr(e)}")
+
+    def is_working_tree_dirty(self) -> bool:
+        """Check if working tree has uncommitted changes.
+        
+        Returns:
+            True if working tree is dirty, False otherwise
+        """
+        try:
+            return self.repo.is_dirty()
+        except Exception as e:
+            logger.warning(f"Failed to check working tree status: {e}")
+            return False
+
+    def parse_semver(self, version: str) -> Optional[semver.Version]:
+        """Parse semantic version string using semver library.
+        
+        Args:
+            version: Version string (e.g., "v1.2.3")
+            
+        Returns:
+            semver.Version object or None if invalid
+        """
+        try:
+            # Remove 'v' prefix if present
+            if version.startswith('v'):
+                version = version[1:]
+            
+            return semver.Version.parse(version)
+        except ValueError:
+            return None
+
+    def bump_patch(self, version: str) -> str:
+        """Bump patch version using semver library.
+        
+        Args:
+            version: Version string (e.g., "v1.2.3")
+            
+        Returns:
+            Bumped version string
+        """
+        parsed = self.parse_semver(version)
+        if parsed:
+            bumped = parsed.bump_patch()
+            return f"v{bumped}"
+        return "v0.0.1"  # Fallback
+
+    def get_latest_semver_tag(self) -> Optional[str]:
+        """Get the latest semantic version tag.
+        
+        Returns:
+            Latest semantic version tag or None if not found
+        """
+        try:
+            tags = self.repo.tags
+            semver_tags = []
+            
+            for tag in tags:
+                tag_name = tag.name
+                if self.parse_semver(tag_name):
+                    semver_tags.append(tag_name)
+            
+            if not semver_tags:
+                return None
+            
+            # Sort by semantic version using semver library
+            semver_tags.sort(key=lambda x: self.parse_semver(x) or semver.Version.parse("0.0.0"))
+            return semver_tags[-1]
+            
+        except Exception as e:
+            logger.warning(f"Failed to get latest semver tag: {e}")
+            return None
+
+    def generate_version_name(self, revision: GitRevision) -> str:
+        """Generate version name according to GoReleaser-like logic.
+        
+        Args:
+            revision: GitRevision object
+            
+        Returns:
+            Generated version name
+        """
+        # Get latest semantic version tag
+        latest_tag = self.get_latest_semver_tag()
+        
+        if revision.tag_name:
+            # Current commit is a tag
+            base_version = revision.tag_name
+            suffix = revision.commit_hash[:7]
+        else:
+            # Current commit is not a tag, bump version
+            if latest_tag:
+                next_version = self.bump_patch(latest_tag)
+            else:
+                next_version = "v0.0.1"  # Start from v0.0.1
+            
+            base_version = next_version
+            suffix = revision.commit_hash[:7]
+        
+        # Check working directory status
+        if revision.is_dirty:
+            return f"{base_version}-dirty-{suffix}"
+        elif not revision.tag_name:
+            # Only add snapshot for non-tag versions with clean working directory
+            return f"{base_version}-snapshot-{suffix}"
+        else:
+            # Tag version, use version directly
+            return f"{base_version}-{suffix}"
 
     def get_current_revision(self) -> GitRevision:
         """Get current Git revision.
@@ -86,13 +191,24 @@ class GitRepository:
                 ref_name = "detached-head"
                 logger.info(f"  • Using reference name: {ref_name}")
 
+        # Check if working tree is dirty
+        is_dirty = self.is_working_tree_dirty()
+        if is_dirty:
+            logger.info("  • Working tree is dirty (has uncommitted changes)")
+        else:
+            logger.info("  • Working tree is clean")
+
         revision = GitRevision(
             commit_hash=commit.hexsha,
             tag_name=tag_name,
             ref_name=ref_name,
             branch_name=branch_name,
+            is_dirty=is_dirty,
         )
 
+        # Generate version name
+        revision.version_name = self.generate_version_name(revision)
+        logger.info(f"  • Version name: {revision.version_name}")
         logger.info(f"  • Display name: {revision.display_name}")
         return revision
 
@@ -118,7 +234,8 @@ class GitRepository:
             f"  • Parent commit found: {previous.hexsha[:7]} - {previous.summary}"
         )
         logger.info(
-            f"  • Authored by: {previous.author.name} on {datetime.datetime.fromtimestamp(previous.authored_date).strftime('%Y-%m-%d %H:%M:%S')}"
+            f"  • Authored by: {previous.author.name} on "
+            f"{datetime.datetime.fromtimestamp(previous.authored_date).strftime('%Y-%m-%d %H:%M:%S')}"
         )
 
         tag_name = self._find_tag_for_commit(previous)
@@ -156,8 +273,9 @@ class GitRepository:
 
             logger.info("  • Tags sorted by commit date (showing up to 5):")
             for idx, tag in enumerate(sorted_tags[:5]):
+                commit_date = tag.commit.committed_datetime.strftime('%Y-%m-%d %H:%M:%S')
                 logger.info(
-                    f"    {idx + 1}. {tag.name} - {tag.commit.hexsha[:7]} ({tag.commit.committed_datetime.strftime('%Y-%m-%d %H:%M:%S')})"
+                    f"    {idx + 1}. {tag.name} - {tag.commit.hexsha[:7]} ({commit_date})"
                 )
 
             for tag in sorted_tags:

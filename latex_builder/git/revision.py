@@ -12,6 +12,8 @@ class GitRevision:
     tag_name: Optional[str] = None
     branch_name: Optional[str] = None
     ref_name: Optional[str] = None
+    is_dirty: bool = False
+    version_name: Optional[str] = None
 
     @property
     def short_hash(self) -> str:
@@ -21,6 +23,10 @@ class GitRevision:
     @property
     def display_name(self) -> str:
         """Return a human-readable display name for the revision."""
+        # Use version_name if available, otherwise fall back to old logic
+        if self.version_name:
+            return self.version_name
+        
         # Start with the most specific identifier
         if self.tag_name:
             prefix = [self.tag_name]
