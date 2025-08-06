@@ -1,7 +1,7 @@
 [project]
 name = "latex-builder"
 version = "0.1.0"
-description = ""
+description = "A tool for building LaTeX documents with Git integration and diff generation"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -10,3 +10,6 @@ dependencies = [
     "rich>=14.0.0",
     "ruff>=0.11.5",
 ]
+
+[project.scripts]
+latex-builder = "latex_builder.cli.main:main"
