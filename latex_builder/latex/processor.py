@@ -148,7 +148,7 @@ class LaTeXProcessor:
                 output_file.parent.mkdir(parents=True, exist_ok=True)
             
             logger.info("Running latexdiff with flatten option")
-            result = run_command([
+            result = run_latex_command([
                 "latexdiff", 
                 "--flatten", 
                 str(original_file), 
