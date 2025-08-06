@@ -13,11 +13,7 @@ A Python tool for building LaTeX documents with Git version management and autom
 ## Installation
 
 ```bash
-# Install with pip
-pip install -e .
-
-# Or install with uv
-uv pip install -e .
+pipx install latex-builder
 ```
 
 ## Usage
