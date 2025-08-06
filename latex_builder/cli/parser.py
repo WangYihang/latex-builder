@@ -71,8 +71,8 @@ def parse_arguments() -> Config:
     # Revision file path
     parser.add_argument(
         "--revision-file",
-        default="miscellaneous/revision.tex",
-        help="Path for generated revision.tex file (default: miscellaneous/revision.tex)",
+        default="variables/revision.tex",
+        help="Path for generated revision.tex file (default: variables/revision.tex)",
     )
 
     # Build options

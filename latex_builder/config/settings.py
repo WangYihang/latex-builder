@@ -12,7 +12,7 @@ class Config:
     tex_file: str = "main.tex"
     compiler: str = "xelatex"
     compare_with: Optional[str] = None
-    revision_file: str = "miscellaneous/revision.tex"
+    revision_file: str = "variables/revision.tex"
     output_dir: Path = Path("output")
     build_dir: Path = Path("build")
     no_diff: bool = False

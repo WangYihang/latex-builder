@@ -87,7 +87,7 @@ latex_builder/
 ## 配置选项
 
 - `tex_file`: 要编译的主 LaTeX 文件（默认："main.tex"）
-- `revision_path`: revision.tex 文件路径（默认："miscellaneous/revision.tex"）
+- `revision_path`: revision.tex 文件路径（默认："variables/revision.tex"）
 - `verbose`: 启用调试日志（默认：False）
 - `output_folder`: 输出文件目录（默认："output"）
 - `build_dir`: 临时构建文件目录（默认："build"）
