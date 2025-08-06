@@ -11,9 +11,9 @@ from .cli.main import LatexDiffTool
 
 __all__ = [
     "Config",
-    "GitRevision", 
+    "GitRevision",
     "GitRepository",
     "LaTeXProcessor",
-    "DiffGenerator", 
-    "LatexDiffTool"
+    "DiffGenerator",
+    "LatexDiffTool",
 ]

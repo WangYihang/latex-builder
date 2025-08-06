@@ -27,14 +27,16 @@ class LaTeXProcessor:
                       tex_file: str, 
                       working_dir: Optional[Path] = None, 
                       output_folder: Optional[Path] = None, 
-                      output_filename: str = "main.pdf") -> None:
-        """Build LaTeX document using xelatex and bibtex.
+                      output_filename: str = "main.pdf",
+                      compiler: str = "xelatex") -> None:
+        """Build LaTeX document using specified compiler and bibtex.
         
         Args:
             tex_file: Name of .tex file to compile
             working_dir: Directory to run commands in (defaults to self.base_dir)
             output_folder: Directory for output files
             output_filename: Name of output file (without extension)
+            compiler: LaTeX compiler to use (xelatex, pdflatex, lualatex)
             
         Raises:
             RuntimeError: If build fails
@@ -51,7 +53,7 @@ class LaTeXProcessor:
         
         try:
             logger.info("Starting LaTeX compilation process")
-            self._run_latex_commands(tex_file, cwd)
+            self._run_latex_commands(tex_file, cwd, compiler)
             
             basename = Path(tex_file).stem
             pdf_file = cwd / f"{basename}.pdf"
@@ -79,39 +81,45 @@ class LaTeXProcessor:
             logger.error("LaTeX build failed", error=str(e))
             raise RuntimeError(f"LaTeX build failed: {repr(e)}")
     
-    def _run_latex_commands(self, tex_file: str, cwd: Path) -> None:
+    def _run_latex_commands(self, tex_file: str, cwd: Path, compiler: str = "xelatex") -> None:
         """Run LaTeX commands to compile document.
         
         Args:
             tex_file: Name of .tex file to compile
             cwd: Directory to run commands in
+            compiler: LaTeX compiler to use (xelatex, pdflatex, lualatex)
             
         Raises:
             RuntimeError: If any command fails
         """
         basename = Path(tex_file).stem
         
-        logger.info("Running xelatex first pass")
+        # Validate compiler
+        valid_compilers = ["xelatex", "pdflatex", "lualatex"]
+        if compiler not in valid_compilers:
+            raise RuntimeError(f"Unsupported compiler: {compiler}. Valid options: {valid_compilers}")
+        
+        logger.info(f"Running {compiler} first pass")
         cmd_start = time.time()
-        run_command(["xelatex", "-shell-escape", tex_file], cwd)
-        logger.debug("xelatex first pass completed", duration=f"{time.time() - cmd_start:.2f}s")
+        run_command([compiler, "-shell-escape", tex_file], cwd)
+        logger.debug(f"{compiler} first pass completed", duration=f"{time.time() - cmd_start:.2f}s")
         
         logger.info("Running bibtex")
         cmd_start = time.time()
         run_command(["bibtex", basename], cwd)
         logger.debug("bibtex completed", duration=f"{time.time() - cmd_start:.2f}s")
         
-        logger.info("Running xelatex second pass")
+        logger.info(f"Running {compiler} second pass")
         cmd_start = time.time()
-        run_command(["xelatex", "-shell-escape", tex_file], cwd)
-        logger.debug("xelatex second pass completed", duration=f"{time.time() - cmd_start:.2f}s")
+        run_command([compiler, "-shell-escape", tex_file], cwd)
+        logger.debug(f"{compiler} second pass completed", duration=f"{time.time() - cmd_start:.2f}s")
         
-        logger.info("Running xelatex final pass")
+        logger.info(f"Running {compiler} final pass")
         cmd_start = time.time()
-        run_command(["xelatex", "-shell-escape", tex_file], cwd)
-        logger.debug("xelatex final pass completed", duration=f"{time.time() - cmd_start:.2f}s")
+        run_command([compiler, "-shell-escape", tex_file], cwd)
+        logger.debug(f"{compiler} final pass completed", duration=f"{time.time() - cmd_start:.2f}s")
         
-        logger.info("LaTeX compilation sequence completed", tex_file=tex_file)
+        logger.info("LaTeX compilation sequence completed", tex_file=tex_file, compiler=compiler)
     
     def generate_diff(self, 
                      original_file: Path, 
