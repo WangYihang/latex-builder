@@ -10,8 +10,7 @@ logger = get_logger(__name__)
 
 
 def parse_arguments() -> Config:
-    """
-    Parse command line arguments.
+    """Parse command line arguments.
     
     Returns:
         Config object with parsed arguments
@@ -54,7 +53,7 @@ def parse_arguments() -> Config:
     )
     
     args = parser.parse_args()
-    logger.info(f"Arguments parsed: {vars(args)}")
+    logger.info("Arguments parsed", **vars(args))
     
     return Config(
         tex_file=args.tex_file,

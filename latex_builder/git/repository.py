@@ -19,46 +19,48 @@ class GitRepository:
     """Handle Git repository operations."""
     
     def __init__(self, repo_path: Optional[Path] = None):
-        """
-        Initialize GitRepository.
+        """Initialize GitRepository.
         
         Args:
-            repo_path: Path to the Git repository, defaults to current directory
+            repo_path: Path to Git repository, defaults to current directory
         
         Raises:
-            ValueError: If the path is not a valid Git repository
+            ValueError: If path is not a valid Git repository
         """
-        logger.info("STEP 1: Initializing Git repository")
         try:
             self.repo_path = repo_path or Path.cwd()
-            logger.info(f"  • Searching for Git repository at: {self.repo_path}")
+            logger.info("Initializing Git repository", path=str(self.repo_path))
             self.repo = git.Repo(self.repo_path)
-            logger.info(f"  • Successfully initialized Git repository")
-            logger.debug(f"  • Repository root: {self.repo.git_dir}")
+            logger.info("Git repository initialized successfully", 
+                       git_dir=self.repo.git_dir)
         except git.InvalidGitRepositoryError:
-            logger.error(f"  • Failed: {self.repo_path} is not a valid Git repository")
+            logger.error("Invalid Git repository", path=str(self.repo_path))
             raise ValueError(f"{self.repo_path} is not a valid Git repository")
         except Exception as e:
-            logger.error(f"  • Failed: Error initializing Git repository: {repr(e)}")
+            logger.error("Git repository initialization failed", 
+                        path=str(self.repo_path), error=str(e))
             raise ValueError(f"Error initializing Git repository: {repr(e)}")
     
     def get_current_revision(self) -> GitRevision:
-        """
-        Get the current Git revision.
+        """Get current Git revision.
         
         Returns:
             GitRevision object for current HEAD
         """
-        logger.info("STEP 2: Getting current Git revision")
+        logger.info("Getting current Git revision")
         commit = self.repo.head.commit
-        logger.info(f"  • Current commit: {commit.hexsha[:7]} - {commit.summary}")
-        logger.info(f"  • Authored by: {commit.author.name} on {datetime.datetime.fromtimestamp(commit.authored_date).strftime('%Y-%m-%d %H:%M:%S')}")
+        commit_date = datetime.datetime.fromtimestamp(commit.authored_date).strftime('%Y-%m-%d %H:%M:%S')
+        logger.info("Current commit found", 
+                   hash=commit.hexsha[:7], 
+                   summary=commit.summary,
+                   author=commit.author.name,
+                   date=commit_date)
         
         tag_name = self._find_tag_for_commit(commit)
         if tag_name:
-            logger.info(f"  • Tag found: {tag_name}")
+            logger.info("Tag found for current commit", tag=tag_name)
         else:
-            logger.info(f"  • No tags associated with current commit")
+            logger.debug("No tags associated with current commit")
             
         branch_name = None
         try:

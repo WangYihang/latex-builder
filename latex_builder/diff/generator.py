@@ -29,15 +29,15 @@ class DiffGenerator:
             latex_processor: LaTeXProcessor instance
             config: Configuration object
         """
-        logger.info("STEP 10: Initializing Diff Generator")
         self.git_repo = git_repo
         self.latex_processor = latex_processor
         self.config = config
         self.output_folder = config.output_folder
         self.build_dir = config.build_dir
         
-        logger.info(f"  • Output folder: {self.output_folder}")
-        logger.info(f"  • Build directory: {self.build_dir}")
+        logger.info("Diff generator initialized",
+                   output_folder=str(self.output_folder),
+                   build_dir=str(self.build_dir))
     
     def generate_diffs(self, 
                       current: GitRevision, 
@@ -54,19 +54,17 @@ class DiffGenerator:
         Raises:
             RuntimeError: If any operation fails
         """
-        logger.info("STEP 11: Starting diff generation process")
-        logger.info(f"  • Current revision: {current.display_name}")
-        logger.info(f"  • Previous commit: {previous_commit.display_name}")
-        logger.info(f"  • Previous tag: {previous_tag.display_name}")
+        logger.info("Starting diff generation process",
+                   current=current.display_name,
+                   previous_commit=previous_commit.display_name,
+                   previous_tag=previous_tag.display_name)
         
-        # Ensure output folder exists
         if not self.output_folder.exists():
-            logger.info(f"  • Creating output folder: {self.output_folder}")
+            logger.info("Creating output folder", path=str(self.output_folder))
             self.output_folder.mkdir(parents=True, exist_ok=True)
 
-        # Prepare build directories
         if not self.build_dir.exists():
-            logger.info(f"  • Creating build directory: {self.build_dir}")
+            logger.info("Creating build directory", path=str(self.build_dir))
             self.build_dir.mkdir(parents=True, exist_ok=True)
         
         # Setup checkout directories
@@ -92,7 +90,7 @@ class DiffGenerator:
         logger.info(f"  • Saving metadata")
         self._save_metadata(current, previous_commit, previous_tag)
         
-        logger.info("STEP 12: All operations completed successfully")
+        logger.info("Diff generation completed successfully")
     
     def _build_current_version(self, current: GitRevision, current_dir: Path) -> None:
         """

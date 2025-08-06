@@ -17,25 +17,21 @@ class LatexDiffTool:
     """Main application class for LaTeX diff tool."""
     
     def __init__(self, config: Config):
-        """
-        Initialize LatexDiffTool.
+        """Initialize LatexDiffTool.
         
         Args:
             config: Configuration object
         """
         self.config = config
         
-        # Set up logging
         setup_logging(config.verbose)
         
-        # Initialize components
-        logger.info("Initializing LaTeX Diff Tool")
-        logger.info(f"Configuration:")
-        logger.info(f"  • LaTeX file: {config.tex_file}")
-        logger.info(f"  • Revision path: {config.revision_path}")
-        logger.info(f"  • Output folder: {config.output_folder}")
-        logger.info(f"  • Build directory: {config.build_dir}")
-        logger.info(f"  • Verbose mode: {config.verbose}")
+        logger.info("Initializing LaTeX Diff Tool", 
+                   tex_file=config.tex_file,
+                   revision_path=config.revision_path,
+                   output_folder=str(config.output_folder),
+                   build_dir=str(config.build_dir),
+                   verbose=config.verbose)
         
         self.git_repo = GitRepository()
         self.latex_processor = LaTeXProcessor()
@@ -46,8 +42,7 @@ class LatexDiffTool:
         )
     
     def run(self) -> int:
-        """
-        Execute the main workflow.
+        """Execute the main workflow.
         
         Returns:
             Exit code (0 for success, non-zero for failure)
@@ -65,6 +60,10 @@ class LatexDiffTool:
                 logger.error("No previous commit found, cannot generate diff")
                 return 1
             
+            if not previous_tag:
+                logger.error("No previous tag found, cannot generate diff")
+                return 1
+            
             # Generate diffs
             logger.info("Starting diff generation process")
             self.diff_generator.generate_diffs(
@@ -75,26 +74,25 @@ class LatexDiffTool:
             
             end_time = time.time()
             duration = end_time - start_time
-            logger.info(f"Process completed successfully in {duration:.2f} seconds")
+            logger.info("Process completed successfully", duration=f"{duration:.2f}s")
             
             return 0
         except Exception as e:
-            logger.error(f"An unexpected error occurred: {repr(e)}")
+            logger.error("Unexpected error occurred", error=str(e))
             return 1
 
 
 def main() -> int:
-    """
-    Main entry point for the CLI.
+    """Main entry point for the CLI.
     
     Returns:
         Exit code (0 for success, non-zero for failure)
     """
     from latex_builder.cli.parser import parse_arguments
     
-    logger.info("LaTeX Diff Tool starting")
-    logger.info(f"Python version: {sys.version}")
-    logger.info(f"Current working directory: {os.getcwd()}")
+    logger.info("LaTeX Diff Tool starting", 
+               python_version=sys.version,
+               working_dir=os.getcwd())
     
     config = parse_arguments()
     tool = LatexDiffTool(config)
@@ -105,6 +103,6 @@ def main() -> int:
     if result == 0:
         logger.info("LaTeX Diff Tool completed successfully")
     else:
-        logger.error("LaTeX Diff Tool failed")
+        logger.error("LaTeX Diff Tool failed", exit_code=result)
     
     return result

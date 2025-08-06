@@ -1,57 +1,40 @@
-"""Logging configuration and utilities."""
+"""Structured logging configuration and utilities."""
 
 import logging
+import sys
 from typing import Optional
 
-try:
-    from rich.logging import RichHandler
-except ImportError:
-    RichHandler = None
-
-# Global logger cache
-_loggers = {}
+import structlog
 
 
 def setup_logging(verbose: bool = False) -> None:
-    """
-    Setup global logging configuration.
+    """Setup structured logging configuration.
     
     Args:
         verbose: Enable debug logging
     """
-    level = logging.DEBUG if verbose else logging.INFO
-    
-    # Configure root logger
-    handlers = []
-    if RichHandler:
-        handlers.append(RichHandler(rich_tracebacks=True))
-    else:
-        handlers.append(logging.StreamHandler())
-    
-    logging.basicConfig(
-        level=level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=handlers,
-        force=True
+    structlog.configure(
+        processors=[
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer(colors=True)
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(
+            min_level=logging.DEBUG if verbose else logging.INFO
+        ),
+        logger_factory=structlog.WriteLoggerFactory(file=sys.stdout),
+        cache_logger_on_first_use=True,
     )
 
 
-def get_logger(name: Optional[str] = None) -> logging.Logger:
-    """
-    Get a logger instance with rich formatting.
+def get_logger(name: Optional[str] = None) -> structlog.BoundLogger:
+    """Get a structured logger instance.
     
     Args:
         name: Logger name, defaults to calling module
         
     Returns:
-        Configured logger instance
+        Configured structlog logger instance
     """
-    if name is None:
-        name = "latex-builder"
-    
-    if name not in _loggers:
-        logger = logging.getLogger(name)
-        _loggers[name] = logger
-    
-    return _loggers[name]
+    logger_name = name or "latex-builder"
+    return structlog.get_logger(logger_name)
