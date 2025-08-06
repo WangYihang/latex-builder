@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+from pathlib import Path
 
 from latex_builder.config.settings import Config
 from latex_builder.git.repository import GitRepository
@@ -114,26 +115,48 @@ class LatexDiffTool:
 
 
 def main() -> int:
-    """Main entry point for the CLI.
-
-    Returns:
-        Exit code (0 for success, non-zero for failure)
-    """
+    """Main entry point for the CLI."""
     from latex_builder.cli.parser import parse_arguments
 
     logger.info(
         "LaTeX Diff Tool starting", python_version=sys.version, working_dir=os.getcwd()
     )
 
-    config = parse_arguments()
-    tool = LatexDiffTool(config)
+    args = parse_arguments()
 
-    logger.info("Running LaTeX Diff Tool")
-    result = tool.run()
-
-    if result == 0:
-        logger.info("LaTeX Diff Tool completed successfully")
+    if getattr(args, "subcommand", None) == "revision":
+        # Only generate revision.tex
+        setup_logging(verbose=getattr(args, "verbose", False), quiet=getattr(args, "quiet", False))
+        repo = GitRepository(Path(args.repo_path).resolve())
+        revision = repo.get_current_revision()
+        output_path = Path(args.revision_file)
+        try:
+            repo.generate_revision_file(revision, output_path)
+            logger.info(f"Successfully generated revision.tex at {output_path}")
+            return 0
+        except Exception as e:
+            logger.error(f"Failed to generate revision.tex: {e}")
+            return 1
     else:
-        logger.error("LaTeX Diff Tool failed", exit_code=result)
-
-    return result
+        # Default: build/diff workflow
+        config = Config(
+            repo_path=Path(getattr(args, "repo_path", ".")).resolve(),
+            tex_file=getattr(args, "tex_file", "main.tex"),
+            compiler=getattr(args, "compiler", "xelatex"),
+            compare_with=getattr(args, "compare_with", None),
+            revision_file=getattr(args, "revision_file", "variables/revision.tex"),
+            output_dir=Path(getattr(args, "output_dir", "output")),
+            build_dir=Path(getattr(args, "build_dir", "build")),
+            no_diff=getattr(args, "no_diff", False),
+            diff_only=getattr(args, "diff_only", False),
+            verbose=getattr(args, "verbose", False),
+            quiet=getattr(args, "quiet", False),
+        )
+        tool = LatexDiffTool(config)
+        logger.info("Running LaTeX Diff Tool")
+        result = tool.run()
+        if result == 0:
+            logger.info("LaTeX Diff Tool completed successfully")
+        else:
+            logger.error("LaTeX Diff Tool failed", exit_code=result)
+        return result

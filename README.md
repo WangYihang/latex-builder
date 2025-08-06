@@ -32,6 +32,16 @@ pipx run latex-builder -v
 pipx run latex-builder -t main.tex -r misc/revision.tex -o output -b build -v
 ```
 
+### Generate Only revision.tex
+
+```bash
+# Generate revision.tex only (no build or diff)
+pipx run latex-builder revision
+
+# Specify output path for revision.tex
+pipx run latex-builder revision --revision-file misc/revision.tex
+```
+
 ### Python API
 
 ```python
