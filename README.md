@@ -10,11 +10,6 @@ A Python tool for building LaTeX documents with Git version management and autom
 - **Version Management**: Generate version information files for LaTeX documents
 - **Clear Logging**: Beautiful command-line interface with clear progress indicators
 
-## Installation
-
-```bash
-pipx install latex-builder
-```
 
 ## Usage
 
@@ -22,19 +17,19 @@ pipx install latex-builder
 
 ```bash
 # Basic usage (in Git repository containing main.tex)
-latex-builder
+pipx run latex-builder
 
 # Specify LaTeX file
-latex-builder -t document.tex
+pipx run latex-builder -t document.tex
 
 # Specify output directory
-latex-builder -o build_output
+pipx run latex-builder -o build_output
 
 # Enable verbose output
-latex-builder -v
+pipx run latex-builder -v
 
 # Full options
-latex-builder -t main.tex -r misc/revision.tex -o output -b build -v
+pipx run latex-builder -t main.tex -r misc/revision.tex -o output -b build -v
 ```
 
 ### Python API
