@@ -1,53 +1,53 @@
 # LaTeX Builder
 
-一个用于构建 LaTeX 文档的 Python 工具，集成了 Git 版本管理和自动差异生成功能。
+A Python tool for building LaTeX documents with Git version management and automatic diff generation.
 
-## 功能特性
+## Features
 
-- **Git 集成**: 自动检测当前提交、分支和标签信息
-- **LaTeX 编译**: 使用 XeLaTeX 和 BibTeX 的完整编译工作流
-- **差异生成**: 使用 latexdiff 创建 Git 版本间的可视化差异
-- **版本管理**: 为 LaTeX 文档生成版本信息文件
-- **清晰日志**: 美观的命令行界面，进度清晰可见
+- **Git Integration**: Automatic detection of current commit, branch, and tag information
+- **LaTeX Compilation**: Complete compilation workflow using XeLaTeX and BibTeX
+- **Diff Generation**: Create visual differences between Git versions using latexdiff
+- **Version Management**: Generate version information files for LaTeX documents
+- **Clear Logging**: Beautiful command-line interface with clear progress indicators
 
-## 安装
+## Installation
 
 ```bash
-# 使用 pip 安装
+# Install with pip
 pip install -e .
 
-# 或使用 uv 安装
+# Or install with uv
 uv pip install -e .
 ```
 
-## 使用方法
+## Usage
 
-### 命令行使用
+### Command Line
 
 ```bash
-# 基本使用（在包含 main.tex 的 Git 仓库中）
+# Basic usage (in Git repository containing main.tex)
 latex-builder
 
-# 指定 LaTeX 文件
+# Specify LaTeX file
 latex-builder -t document.tex
 
-# 指定输出目录
+# Specify output directory
 latex-builder -o build_output
 
-# 启用详细输出
+# Enable verbose output
 latex-builder -v
 
-# 完整选项
+# Full options
 latex-builder -t main.tex -r misc/revision.tex -o output -b build -v
 ```
 
-### Python API 使用
+### Python API
 
 ```python
 from latex_builder import Config, LatexDiffTool
 from pathlib import Path
 
-# 创建配置
+# Create configuration
 config = Config(
     tex_file="main.tex",
     revision_path="misc/revision.tex",
@@ -56,89 +56,87 @@ config = Config(
     verbose=True
 )
 
-# 运行工具
+# Run tool
 tool = LatexDiffTool(config)
 exit_code = tool.run()
 ```
 
-## 包结构
-
-包按功能模块进行组织：
+## Package Structure
 
 ```
 latex_builder/
-├── cli/                    # 命令行界面
-│   ├── main.py            # 主应用程序类
-│   └── parser.py          # 命令行参数解析
-├── config/                # 配置管理
-│   └── settings.py        # 配置数据类
-├── diff/                  # 差异生成
-│   └── generator.py       # LaTeX 差异操作
-├── git/                   # Git 操作
-│   ├── repository.py      # Git 仓库处理
-│   └── revision.py        # Git 版本数据结构
-├── latex/                 # LaTeX 处理
-│   └── processor.py       # LaTeX 编译
-└── utils/                 # 共享工具
-    ├── command.py         # 命令执行
-    └── logging.py         # 日志设置
+├── cli/                    # Command line interface
+│   ├── main.py            # Main application class
+│   └── parser.py          # Command line argument parsing
+├── config/                # Configuration management
+│   └── settings.py        # Configuration data classes
+├── diff/                  # Diff generation
+│   └── generator.py       # LaTeX diff operations
+├── git/                   # Git operations
+│   ├── repository.py      # Git repository handling
+│   └── revision.py        # Git version data structures
+├── latex/                 # LaTeX processing
+│   └── processor.py       # LaTeX compilation
+└── utils/                 # Shared utilities
+    ├── command.py         # Command execution
+    └── logging.py         # Logging setup
 ```
 
-## 配置选项
+## Configuration Options
 
-- `tex_file`: 要编译的主 LaTeX 文件（默认："main.tex"）
-- `revision_path`: revision.tex 文件路径（默认："variables/revision.tex"）
-- `verbose`: 启用调试日志（默认：False）
-- `output_folder`: 输出文件目录（默认："output"）
-- `build_dir`: 临时构建文件目录（默认："build"）
+- `tex_file`: Main LaTeX file to compile (default: "main.tex")
+- `revision_path`: Path to revision.tex file (default: "variables/revision.tex")
+- `verbose`: Enable debug logging (default: False)
+- `output_folder`: Output files directory (default: "output")
+- `build_dir`: Temporary build files directory (default: "build")
 
-## 输出文件
+## Output Files
 
-工具会生成以下输出文件：
+The tool generates the following output files:
 
-- **当前版本 PDF**: `{版本名称}.pdf`
-- **差异 PDF**: 
+- **Current Version PDF**: `{version-name}.pdf`
+- **Diff PDFs**: 
   - `diff/since-last-commit-{hash}.pdf`
   - `diff/since-last-tag-{tag}.pdf`
-- **元数据**: `metadata.json` 包含版本信息
-- **版本文件**: `revision.tex` 包含用于 LaTeX 的版本宏
+- **Metadata**: `metadata.json` containing version information
+- **Version File**: `revision.tex` containing version macros for LaTeX
 
-## 系统要求
+## Requirements
 
 - Python 3.11+
-- Git 仓库
-- LaTeX 安装包括：
+- Git repository
+- LaTeX installation including:
   - XeLaTeX
   - BibTeX
   - latexdiff
 
-## 使用示例
+## Example
 
 ```bash
-# 在包含 LaTeX 项目的 Git 仓库中
+# In a Git repository containing LaTeX project
 cd my-latex-project
 
-# 安装包
+# Install package
 uv pip install -e /path/to/latex-builder
 
-# 构建当前版本并生成差异
+# Build current version and generate diffs
 uv run latex-builder -v
 ```
 
-这将：
-1. 分析当前 Git 状态
-2. 生成版本信息文件
-3. 编译当前版本的 PDF
-4. 与上一个提交和上一个标签生成差异文档
-5. 将所有文件输出到 `output/` 目录
+This will:
+1. Analyze current Git state
+2. Generate version information files
+3. Compile current version PDF
+4. Generate diff documents with previous commit and previous tag
+5. Output all files to `output/` directory
 
-## 开发架构
+## Architecture
 
-该包采用模块化架构，职责分离清晰：
+The package uses a modular architecture with clear separation of concerns:
 
-- **CLI 层**: 处理命令行交互
-- **核心逻辑**: Git 操作、LaTeX 处理、差异生成
-- **配置**: 集中化设置管理
-- **工具**: 日志和命令执行的共享功能
+- **CLI Layer**: Handles command line interaction
+- **Core Logic**: Git operations, LaTeX processing, diff generation
+- **Configuration**: Centralized settings management
+- **Utilities**: Shared functionality for logging and command execution
 
-每个模块都可独立测试，遵循 Python 最佳实践。
+Each module can be tested independently, following Python best practices.
