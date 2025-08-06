@@ -194,9 +194,9 @@ class DiffGenerator:
         Returns:
             Dictionary mapping revision names to checkout directories
         """
-        # Create playground directory in temp directory
+        # Create playground directory in temp directory with version info
         temp_dir = Path(tempfile.gettempdir())
-        playground_dir = temp_dir / "latex-builder-playground"
+        playground_dir = temp_dir / "latex-builder"
         
         logger.info(f"    - Creating playground directory: {playground_dir}")
         if playground_dir.exists():
@@ -206,9 +206,9 @@ class DiffGenerator:
         
         playground_dir.mkdir(parents=True, exist_ok=True)
         
-        # Setup checkout directories within playground
-        current_dir = playground_dir / "current"
-        compare_dir = playground_dir / "compare"
+        # Setup checkout directories within playground using version names
+        current_dir = playground_dir / current.display_name
+        compare_dir = playground_dir / compare_revision.display_name
         
         logger.info(f"    - Current directory: {current_dir}")
         logger.info(f"    - Compare directory: {compare_dir}")
