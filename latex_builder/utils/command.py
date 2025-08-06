@@ -10,7 +10,7 @@ from latex_builder.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-def run_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) -> str:
+def run_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) -> None:
     """Execute shell command and return output.
 
     Args:
@@ -36,34 +36,12 @@ def run_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) 
         })
         
         # 使用subprocess.run，更简单直接
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             cwd=cwd,
             env=env,
-            capture_output=True,
-            text=True,
             timeout=timeout
         )
-        
-        # 检查退出码
-        if result.returncode != 0:
-            stderr_output = result.stderr.strip() if result.stderr else ""
-            logger.error(
-                "Command failed", 
-                command=cmd_str, 
-                exit_code=result.returncode,
-                stderr=stderr_output
-            )
-            
-            # 提供更详细的错误信息
-            error_msg = f"Command failed with exit code {result.returncode}: {cmd_str}"
-            if stderr_output:
-                error_msg += f"\nError output: {stderr_output}"
-            
-            raise RuntimeError(error_msg)
-
-        return result.stdout.strip()
-        
     except subprocess.TimeoutExpired:
         logger.error("Command timed out", command=cmd_str, timeout=timeout)
         raise RuntimeError(f"Command timed out after {timeout} seconds: {cmd_str}")

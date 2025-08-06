@@ -1,5 +1,6 @@
 """LaTeX document processing operations."""
 
+import subprocess
 import shutil
 import time
 from pathlib import Path
@@ -148,16 +149,19 @@ class LaTeXProcessor:
                 output_file.parent.mkdir(parents=True, exist_ok=True)
             
             logger.info("Running latexdiff with flatten option")
-            result = run_latex_command([
+            
+            # 运行latexdiff命令并捕获输出
+            result = subprocess.run([
                 "latexdiff", 
                 "--flatten", 
                 str(original_file), 
                 str(modified_file)
-            ])
+            ], capture_output=True, text=True, check=True)
             
+            # 将输出保存到文件
             logger.info("Writing diff output", output_file=str(output_file))
-            with open(output_file, "w") as f:
-                f.write(result)
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(result.stdout)
             
             end_time = time.time()
             duration = end_time - start_time    
