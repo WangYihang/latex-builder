@@ -1,6 +1,6 @@
 [project]
 name = "latex-builder"
-version = "0.0.2"
+version = "0.0.3"
 description = "A tool for building LaTeX documents with Git integration and diff generation"
 readme = "README.md"
 requires-python = ">=3.11"
