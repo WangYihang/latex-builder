@@ -2,6 +2,7 @@
 
 import json
 import datetime
+import tempfile
 from pathlib import Path
 from typing import Dict
 
@@ -17,10 +18,12 @@ logger = get_logger(__name__)
 class DiffGenerator:
     """Handles the generation of LaTeX diffs between Git revisions."""
     
-    def __init__(self, 
-                git_repo: GitRepository, 
-                latex_processor: LaTeXProcessor,
-                config: Config):
+    def __init__(
+        self,
+        git_repo: GitRepository,
+        latex_processor: LaTeXProcessor,
+        config: Config,
+    ):
         """
         Initialize DiffGenerator.
         
@@ -35,13 +38,15 @@ class DiffGenerator:
         self.output_folder = config.output_dir
         self.build_dir = config.build_dir
         
-        logger.info("Diff generator initialized",
-                   output_folder=str(self.output_folder),
-                   build_dir=str(self.build_dir))
+        logger.info(
+            "Diff generator initialized",
+            output_folder=str(self.output_folder),
+            build_dir=str(self.build_dir),
+        )
     
-    def generate_diffs(self, 
-                      current: GitRevision, 
-                      compare_revision: GitRevision) -> None:
+    def generate_diffs(
+        self, current: GitRevision, compare_revision: GitRevision
+    ) -> None:
         """
         Generate and build diff files between Git revisions.
         
@@ -52,9 +57,11 @@ class DiffGenerator:
         Raises:
             RuntimeError: If any operation fails
         """
-        logger.info("Starting diff generation process",
-                   current=current.display_name,
-                   compare_with=compare_revision.display_name)
+        logger.info(
+            "Starting diff generation process",
+            current=current.display_name,
+            compare_with=compare_revision.display_name,
+        )
         
         if not self.output_folder.exists():
             logger.info("Creating output folder", path=str(self.output_folder))
@@ -66,20 +73,20 @@ class DiffGenerator:
         
         try:
             # Build the current version first
-            logger.info(f"  • Building current version")
+            logger.info("  • Building current version")
             self._build_current_version(current)
         except Exception as e:
             logger.error(f"  • Failed to build current version: {repr(e)}")
 
         try:
             # Generate and build diff files
-            logger.info(f"  • Generating and building diff files")
+            logger.info("  • Generating and building diff files")
             self._generate_and_build_diff(current, compare_revision)
         except Exception as e:
             logger.error(f"  • Failed to generate and build diff: {repr(e)}")
         
         # Save metadata
-        logger.info(f"  • Saving metadata")
+        logger.info("  • Saving metadata")
         self._save_metadata(current, compare_revision)
         
         logger.info("Diff generation completed successfully")
@@ -104,7 +111,9 @@ class DiffGenerator:
             logger.error(f"Failed to build current version: {repr(e)}")
             raise
     
-    def generate_diff_only(self, current: GitRevision, compare_revision: GitRevision) -> None:
+    def generate_diff_only(
+        self, current: GitRevision, compare_revision: GitRevision
+    ) -> None:
         """
         Generate only the diff file without building PDFs.
         
@@ -112,16 +121,18 @@ class DiffGenerator:
             current: Current Git revision
             compare_revision: Revision to compare against
         """
-        logger.info("Generating diff only", 
-                   current=current.display_name,
-                   compare_with=compare_revision.display_name)
+        logger.info(
+            "Generating diff only",
+            current=current.display_name,
+            compare_with=compare_revision.display_name,
+        )
         
         if not self.output_folder.exists():
-            logger.info("Creating output folder", path=str(self.output_folder))
+            logger.info(f"Creating output folder: {self.output_folder}")
             self.output_folder.mkdir(parents=True, exist_ok=True)
-        
+
         if not self.build_dir.exists():
-            logger.info("Creating build directory", path=str(self.build_dir))
+            logger.info(f"Creating build directory: {self.build_dir}")
             self.build_dir.mkdir(parents=True, exist_ok=True)
         
         try:
@@ -183,9 +194,21 @@ class DiffGenerator:
         Returns:
             Dictionary mapping revision names to checkout directories
         """
-        # Setup checkout directories
-        current_dir = self.build_dir / "current"
-        compare_dir = self.build_dir / "compare"
+        # Create playground directory in temp directory
+        temp_dir = Path(tempfile.gettempdir())
+        playground_dir = temp_dir / "latex-builder-playground"
+        
+        logger.info(f"    - Creating playground directory: {playground_dir}")
+        if playground_dir.exists():
+            logger.info(f"    - Removing existing playground directory")
+            import shutil
+            shutil.rmtree(playground_dir)
+        
+        playground_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Setup checkout directories within playground
+        current_dir = playground_dir / "current"
+        compare_dir = playground_dir / "compare"
         
         logger.info(f"    - Current directory: {current_dir}")
         logger.info(f"    - Compare directory: {compare_dir}")
@@ -197,12 +220,45 @@ class DiffGenerator:
         logger.info(f"    - Checking out compare revision: {compare_revision.display_name}")
         self.git_repo.checkout_revision(compare_revision, compare_dir)
         
-        logger.info(f"    - All revisions checked out successfully")
+        # Run revision functionality in both directories
+        logger.info(f"    - Running revision functionality in current directory")
+        self._run_revision_in_directory(current, current_dir)
+        
+        logger.info(f"    - Running revision functionality in compare directory")
+        self._run_revision_in_directory(compare_revision, compare_dir)
+        
+        logger.info(f"    - All revisions checked out and revision files generated successfully")
         
         return {
             "current": current_dir,
             "compare": compare_dir
         }
+    
+    def _run_revision_in_directory(self, revision: GitRevision, directory: Path) -> None:
+        """
+        Run revision functionality in a specific directory.
+        
+        Args:
+            revision: GitRevision object
+            directory: Directory where to run revision functionality
+        """
+        try:
+            # Create a temporary GitRepository instance for this directory
+            temp_repo = GitRepository(directory)
+            
+            # Generate revision file
+            revision_file_path = directory / self.config.revision_file
+            logger.info(f"      - Generating revision file at: {revision_file_path}")
+            
+            # Ensure the parent directory exists
+            revision_file_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            temp_repo.generate_revision_file(revision, revision_file_path)
+            logger.info(f"      - Successfully generated revision file")
+            
+        except Exception as e:
+            logger.error(f"      - Failed to generate revision file: {repr(e)}")
+            raise
     
     def _generate_and_build_diff(self, 
                                  current: GitRevision, 
