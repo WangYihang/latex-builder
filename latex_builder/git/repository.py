@@ -147,15 +147,22 @@ class GitRepository:
             utc_timestamp = revision.timestamp.strftime("%Y%m%d%H%M%S")
             timestamp_suffix = f"-{utc_timestamp}"
 
-        # Check working directory status
-        if revision.is_dirty:
-            return f"{base_version}-dirty-{commit_hash}{timestamp_suffix}"
-        elif not revision.tag_name:
-            # Only add snapshot for non-tag versions with clean working directory
-            return f"{base_version}-snapshot-{commit_hash}{timestamp_suffix}"
+        # Build version name with proper ordering
+        if revision.tag_name:
+            # Tag version: v1.2.3-commit-timestamp
+            version_parts = [base_version, commit_hash]
         else:
-            # Tag version, use version directly
-            return f"{base_version}-{commit_hash}{timestamp_suffix}"
+            # Non-tag version: v1.2.4-snapshot-commit-timestamp
+            version_parts = [base_version, "snapshot", commit_hash]
+        
+        # Add dirty suffix if working directory is dirty
+        if revision.is_dirty:
+            version_parts.append("dirty")
+        
+        # Add timestamp suffix
+        version_parts.append(timestamp_suffix.lstrip("-"))
+        
+        return "-".join(version_parts)
 
     def get_current_revision(self) -> GitRevision:
         """Get current Git revision.

@@ -113,10 +113,14 @@ The tool generates the following output files:
 - **Version File**: `revision.tex` containing version macros for LaTeX
 
 Examples:
-- `v1.2.3-a1b2c3d-20241130-091545-vs-v1.2.4-snapshot-e4f5g6h-20241201-143022.tex`
-- `v1.2.3-a1b2c3d-20241130-091545-vs-v1.2.4-snapshot-e4f5g6h-20241201-143022.pdf`
+- `v1.2.3-a1b2c3d-20241130091545-vs-v1.2.4-snapshot-e4f5g6h-20241201143022.tex`
+- `v1.2.4-snapshot-a1b2c3d-dirty-20241201143022-vs-v1.2.5-e4f5g6h-20241202120000.pdf`
 
-The timestamp format is `YYYYMMDD-HHMMSS` in UTC timezone.
+The timestamp format is `YYYYMMDDHHMMSS` in UTC timezone. Version naming follows the pattern:
+- Tag versions: `{tag}-{commit}-{timestamp}`
+- Non-tag versions: `{next_version}-snapshot-{commit}-{timestamp}`
+- Dirty versions: `{version}-{commit}-dirty-{timestamp}`
+- Dirty snapshots: `{next_version}-snapshot-{commit}-dirty-{timestamp}`
 
 ## Requirements
 
