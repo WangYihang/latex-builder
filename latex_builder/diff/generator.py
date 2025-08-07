@@ -139,8 +139,8 @@ class DiffGenerator:
             # Setup checkout directories
             checkout_dirs = self._prepare_checkout_directories(current, compare_revision)
             
-            # Generate diff file
-            diff_name = f"diff-{compare_revision.short_hash}-{current.short_hash}.tex"
+            # Generate diff file with new naming convention
+            diff_name = f"{compare_revision.display_name}-vs-{current.display_name}.tex"
             logger.info(f"Generating diff file: {diff_name}")
             
             self.latex_processor.generate_diff(
@@ -273,8 +273,8 @@ class DiffGenerator:
         # Setup checkout directories
         checkout_dirs = self._prepare_checkout_directories(current, compare_revision)
         
-        # Generate diff file name
-        diff_name = f"diff-{compare_revision.short_hash}-{current.short_hash}.tex"
+        # Generate diff file name with new naming convention
+        diff_name = f"{compare_revision.display_name}-vs-{current.display_name}.tex"
         logger.info(f"    - Diff filename: {diff_name}")
 
         # Generate diff
@@ -285,9 +285,9 @@ class DiffGenerator:
             checkout_dirs["compare"] / diff_name
         )
         
-        # Build diff document
+        # Build diff document with consistent naming
         logger.info(f"    - Building diff document")
-        diff_pdf_name = f"diff-{compare_revision.display_name}-to-{current.display_name}.pdf"
+        diff_pdf_name = f"{compare_revision.display_name}-vs-{current.display_name}.pdf"
         self.latex_processor.build_document(
             diff_name, 
             checkout_dirs["compare"], 

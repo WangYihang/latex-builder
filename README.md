@@ -106,11 +106,15 @@ latex_builder/
 The tool generates the following output files:
 
 - **Current Version PDF**: `{version-name}.pdf`
-- **Diff PDFs**: 
-  - `diff/since-last-commit-{hash}.pdf`
-  - `diff/since-last-tag-{tag}.pdf`
+- **Diff Files**: 
+  - **LaTeX Source**: `{compare-version}-vs-{current-version}.tex`
+  - **PDF Document**: `{compare-version}-vs-{current-version}.pdf`
 - **Metadata**: `metadata.json` containing version information
 - **Version File**: `revision.tex` containing version macros for LaTeX
+
+Examples:
+- `v1.2.3-a1b2c3d-vs-v1.2.4-snapshot-e4f5g6h.tex`
+- `v1.2.3-a1b2c3d-vs-v1.2.4-snapshot-e4f5g6h.pdf`
 
 ## Requirements
 
