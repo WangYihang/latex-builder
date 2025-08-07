@@ -265,11 +265,18 @@ class GitRepository:
         # Convert commit timestamp to UTC datetime
         commit_timestamp = datetime.datetime.utcfromtimestamp(previous.authored_date)
 
-        return GitRevision(
+        revision = GitRevision(
             commit_hash=previous.hexsha, 
             tag_name=tag_name,
             timestamp=commit_timestamp
         )
+        
+        # Generate version name
+        revision.version_name = self.generate_version_name(revision)
+        logger.info(f"  • Version name: {revision.version_name}")
+        logger.info(f"  • Display name: {revision.display_name}")
+        
+        return revision
 
     def get_previous_tag(self) -> Optional[GitRevision]:
         """
@@ -310,11 +317,18 @@ class GitRepository:
                     )
                     # Convert commit timestamp to UTC datetime
                     commit_timestamp = datetime.datetime.utcfromtimestamp(tag.commit.authored_date)
-                    return GitRevision(
+                    revision = GitRevision(
                         commit_hash=tag.commit.hexsha, 
                         tag_name=tag.name,
                         timestamp=commit_timestamp
                     )
+                    
+                    # Generate version name
+                    revision.version_name = self.generate_version_name(revision)
+                    logger.info(f"  • Version name: {revision.version_name}")
+                    logger.info(f"  • Display name: {revision.display_name}")
+                    
+                    return revision
 
             # If all tags point to current commit, return None
             logger.info(
@@ -331,10 +345,17 @@ class GitRepository:
             else:
                 # Convert commit timestamp to UTC datetime
                 commit_timestamp = datetime.datetime.utcfromtimestamp(self.repo.head.commit.authored_date)
-                return GitRevision(
+                revision = GitRevision(
                     commit_hash=self.repo.head.commit.hexsha,
                     timestamp=commit_timestamp
                 )
+                
+                # Generate version name
+                revision.version_name = self.generate_version_name(revision)
+                logger.info(f"  • Version name: {revision.version_name}")
+                logger.info(f"  • Display name: {revision.display_name}")
+                
+                return revision
 
     def get_revision_by_ref(self, ref: str) -> Optional[GitRevision]:
         """
@@ -361,11 +382,18 @@ class GitRepository:
             # Convert commit timestamp to UTC datetime
             commit_timestamp = datetime.datetime.utcfromtimestamp(commit.authored_date)
 
-            return GitRevision(
+            revision = GitRevision(
                 commit_hash=commit.hexsha, 
                 tag_name=tag_name,
                 timestamp=commit_timestamp
             )
+            
+            # Generate version name
+            revision.version_name = self.generate_version_name(revision)
+            logger.info(f"  • Version name: {revision.version_name}")
+            logger.info(f"  • Display name: {revision.display_name}")
+            
+            return revision
 
         except (git.GitCommandError, git.BadName) as e:
             logger.warning(f"  • Reference '{ref}' not found: {str(e)}")
