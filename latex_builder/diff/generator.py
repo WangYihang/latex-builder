@@ -308,20 +308,68 @@ class DiffGenerator:
             current: Current Git revision
             compare_revision: Revision compared against
         """
+        # Helper function to create revision metadata
+        def create_revision_metadata(revision: GitRevision) -> dict:
+            metadata = {
+                "commit": {
+                    "hash": revision.commit_hash,
+                    "short_hash": revision.short_hash,
+                    "summary": revision.commit_summary,
+                    "message": revision.commit_message,
+                    "date": revision.commit_date_iso,
+                    "timestamp": revision.timestamp.isoformat() if revision.timestamp else None,
+                },
+                "author": {
+                    "name": revision.author_name,
+                    "email": revision.author_email,
+                },
+                "version": {
+                    "display_name": revision.display_name,
+                    "version_name": revision.version_name,
+                    "tag_name": revision.tag_name,
+                    "is_dirty": revision.is_dirty,
+                },
+                "git": {
+                    "branch_name": revision.branch_name,
+                    "ref_name": revision.ref_name,
+                }
+            }
+            return metadata
+        
+        # Create detailed metadata with nested structure
         metadata = {
-            "current_commit": current.short_hash,
-            "current_display_name": current.display_name,
-            "compare_commit": compare_revision.short_hash,
-            "compare_display_name": compare_revision.display_name,
-            "compare_tag": compare_revision.tag_name,
-            "tex_file": self.config.tex_file,
-            "compiler": self.config.compiler,
-            "timestamp": datetime.datetime.now().isoformat()
+            "diff_generation": {
+                "timestamp": datetime.datetime.now().isoformat(),
+                "settings": {
+                    "tex_file": self.config.tex_file,
+                    "compiler": self.config.compiler,
+                    "output_folder": str(self.output_folder),
+                    "build_dir": str(self.build_dir),
+                }
+            },
+            "revisions": {
+                "current": create_revision_metadata(current),
+                "compare": create_revision_metadata(compare_revision),
+            },
+            "files": {
+                "diff": {
+                    "tex": f"{compare_revision.display_name}-vs-{current.display_name}.tex",
+                    "pdf": f"{compare_revision.display_name}-vs-{current.display_name}.pdf",
+                }
+            },
+            "repository": {
+                "path": str(self.config.repo_path),
+                "working_directory": str(Path.cwd()),
+            }
         }
         
-        logger.info(f"    - Creating metadata:")
-        for key, value in metadata.items():
-            logger.info(f"      • {key}: {value}")
+        logger.info(f"    - Creating detailed metadata:")
+        logger.info(f"      • Current revision: {current.display_name}")
+        logger.info(f"      • Compare revision: {compare_revision.display_name}")
+        logger.info(f"      • Author (current): {current.author_name}")
+        logger.info(f"      • Author (compare): {compare_revision.author_name}")
+        logger.info(f"      • Commit summary (current): {current.commit_summary}")
+        logger.info(f"      • Commit summary (compare): {compare_revision.commit_summary}")
         
         metadata_file = self.output_folder / "metadata.json"
         logger.info(f"    - Writing metadata to: {metadata_file}")

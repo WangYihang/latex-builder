@@ -109,7 +109,15 @@ The tool generates the following output files:
 - **Diff Files**: 
   - **LaTeX Source**: `{compare-version}-vs-{current-version}.tex`
   - **PDF Document**: `{compare-version}-vs-{current-version}.pdf`
-- **Metadata**: `metadata.json` containing version information
+- **Metadata**: `metadata.json` containing detailed version information in a nested structure:
+  - `diff_generation/`: Generation settings and timestamp
+  - `revisions/`: Complete information for both current and compare revisions
+    - `commit/`: Hash, summary, message, date
+    - `author/`: Name and email
+    - `version/`: Display name, version name, tag, dirty status
+    - `git/`: Branch and reference information
+  - `files/`: Generated diff file names
+  - `repository/`: Repository and working directory paths
 - **Version File**: `revision.tex` containing version macros for LaTeX
 
 Examples:

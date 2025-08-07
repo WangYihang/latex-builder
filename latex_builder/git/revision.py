@@ -16,6 +16,13 @@ class GitRevision:
     is_dirty: bool = False
     version_name: Optional[str] = None
     timestamp: Optional[datetime.datetime] = None
+    # Additional commit details
+    author_name: Optional[str] = None
+    author_email: Optional[str] = None
+    commit_summary: Optional[str] = None
+    commit_message: Optional[str] = None
+    commit_date: Optional[datetime.datetime] = None
+    commit_date_iso: Optional[str] = None
 
     @property
     def short_hash(self) -> str:

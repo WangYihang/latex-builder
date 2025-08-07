@@ -222,6 +222,13 @@ class GitRepository:
             branch_name=branch_name,
             is_dirty=is_dirty,
             timestamp=commit_timestamp,
+            # Additional commit details
+            author_name=commit.author.name,
+            author_email=commit.author.email,
+            commit_summary=commit.summary,
+            commit_message=commit.message,
+            commit_date=datetime.datetime.utcfromtimestamp(commit.authored_date),
+            commit_date_iso=datetime.datetime.utcfromtimestamp(commit.authored_date).isoformat(),
         )
 
         # Generate version name
@@ -268,7 +275,14 @@ class GitRepository:
         revision = GitRevision(
             commit_hash=previous.hexsha, 
             tag_name=tag_name,
-            timestamp=commit_timestamp
+            timestamp=commit_timestamp,
+            # Additional commit details
+            author_name=previous.author.name,
+            author_email=previous.author.email,
+            commit_summary=previous.summary,
+            commit_message=previous.message,
+            commit_date=datetime.datetime.utcfromtimestamp(previous.authored_date),
+            commit_date_iso=datetime.datetime.utcfromtimestamp(previous.authored_date).isoformat(),
         )
         
         # Generate version name
@@ -320,7 +334,14 @@ class GitRepository:
                     revision = GitRevision(
                         commit_hash=tag.commit.hexsha, 
                         tag_name=tag.name,
-                        timestamp=commit_timestamp
+                        timestamp=commit_timestamp,
+                        # Additional commit details
+                        author_name=tag.commit.author.name,
+                        author_email=tag.commit.author.email,
+                        commit_summary=tag.commit.summary,
+                        commit_message=tag.commit.message,
+                        commit_date=datetime.datetime.utcfromtimestamp(tag.commit.authored_date),
+                        commit_date_iso=datetime.datetime.utcfromtimestamp(tag.commit.authored_date).isoformat(),
                     )
                     
                     # Generate version name
@@ -347,7 +368,14 @@ class GitRepository:
                 commit_timestamp = datetime.datetime.utcfromtimestamp(self.repo.head.commit.authored_date)
                 revision = GitRevision(
                     commit_hash=self.repo.head.commit.hexsha,
-                    timestamp=commit_timestamp
+                    timestamp=commit_timestamp,
+                    # Additional commit details
+                    author_name=self.repo.head.commit.author.name,
+                    author_email=self.repo.head.commit.author.email,
+                    commit_summary=self.repo.head.commit.summary,
+                    commit_message=self.repo.head.commit.message,
+                    commit_date=datetime.datetime.utcfromtimestamp(self.repo.head.commit.authored_date),
+                    commit_date_iso=datetime.datetime.utcfromtimestamp(self.repo.head.commit.authored_date).isoformat(),
                 )
                 
                 # Generate version name
@@ -385,7 +413,14 @@ class GitRepository:
             revision = GitRevision(
                 commit_hash=commit.hexsha, 
                 tag_name=tag_name,
-                timestamp=commit_timestamp
+                timestamp=commit_timestamp,
+                # Additional commit details
+                author_name=commit.author.name,
+                author_email=commit.author.email,
+                commit_summary=commit.summary,
+                commit_message=commit.message,
+                commit_date=datetime.datetime.utcfromtimestamp(commit.authored_date),
+                commit_date_iso=datetime.datetime.utcfromtimestamp(commit.authored_date).isoformat(),
             )
             
             # Generate version name
