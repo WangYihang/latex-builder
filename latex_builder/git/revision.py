@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Optional
+import datetime
 
 
 @dataclass
@@ -14,6 +15,7 @@ class GitRevision:
     ref_name: Optional[str] = None
     is_dirty: bool = False
     version_name: Optional[str] = None
+    timestamp: Optional[datetime.datetime] = None
 
     @property
     def short_hash(self) -> str:
