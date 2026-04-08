@@ -43,29 +43,87 @@ inputs:
     description: "Enable debug logging"
     required: false
     default: "false"
+  texlive-packages:
+    description: "Space-separated list of extra TeXLive packages to install"
+    required: false
+    default: ""
 
 outputs:
   version-name:
     description: "Generated version name for this build"
+    value: ${{ steps.run.outputs.version-name }}
   pdf-path:
     description: "Path to the generated current-version PDF"
+    value: ${{ steps.run.outputs.pdf-path }}
   diff-pdf-path:
     description: "Path to the generated diff PDF"
+    value: ${{ steps.run.outputs.diff-pdf-path }}
   diff-tex-path:
     description: "Path to the generated diff .tex file"
+    value: ${{ steps.run.outputs.diff-tex-path }}
   metadata-path:
     description: "Path to metadata.json"
+    value: ${{ steps.run.outputs.metadata-path }}
 
 runs:
-  using: "docker"
-  image: "Dockerfile"
-  env:
-    INPUT_TEX_FILE: ${{ inputs.tex-file }}
-    INPUT_COMPILER: ${{ inputs.compiler }}
-    INPUT_COMPARE_WITH: ${{ inputs.compare-with }}
-    INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
-    INPUT_TIMEOUT: ${{ inputs.timeout }}
-    INPUT_REVISION_FILE: ${{ inputs.revision-file }}
-    INPUT_SKIP_DIFF: ${{ inputs.skip-diff }}
-    INPUT_DIFF_ONLY: ${{ inputs.diff-only }}
-    INPUT_VERBOSE: ${{ inputs.verbose }}
+  using: "composite"
+  steps:
+    - name: Install TeXLive
+      uses: zauguin/install-texlive@v3
+      with:
+        packages: >
+          scheme-basic
+          xetex
+          latexmk
+          bibtex
+          biber
+          latexdiff
+          collection-fontsrecommended
+          collection-latexextra
+          ${{ inputs.texlive-packages }}
+
+    - name: Install latex-builder
+      shell: bash
+      run: pipx install "${{ github.action_path }}"
+
+    - name: Build
+      id: run
+      shell: bash
+      env:
+        INPUT_TEX_FILE: ${{ inputs.tex-file }}
+        INPUT_COMPILER: ${{ inputs.compiler }}
+        INPUT_COMPARE_WITH: ${{ inputs.compare-with }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_REVISION_FILE: ${{ inputs.revision-file }}
+        INPUT_SKIP_DIFF: ${{ inputs.skip-diff }}
+        INPUT_DIFF_ONLY: ${{ inputs.diff-only }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+      run: |
+        ARGS=("build" ".")
+        ARGS+=("-f" "$INPUT_TEX_FILE")
+        ARGS+=("-c" "$INPUT_COMPILER")
+        ARGS+=("-o" "$INPUT_OUTPUT_DIR")
+        ARGS+=("-t" "$INPUT_TIMEOUT")
+        ARGS+=("--revision-file" "$INPUT_REVISION_FILE")
+
+        [[ -n "$INPUT_COMPARE_WITH" ]] && ARGS+=("--compare-with" "$INPUT_COMPARE_WITH")
+        [[ "$INPUT_SKIP_DIFF" == "true" ]] && ARGS+=("--skip-diff")
+        [[ "$INPUT_DIFF_ONLY" == "true" ]] && ARGS+=("--diff-only")
+        [[ "$INPUT_VERBOSE" == "true" ]] && ARGS+=("-v")
+
+        latex-builder "${ARGS[@]}"
+
+        # Parse outputs from metadata.json
+        METADATA="$INPUT_OUTPUT_DIR/metadata.json"
+        if [[ -f "$METADATA" ]]; then
+          VERSION_NAME=$(python3 -c "import json,sys; m=json.load(open(sys.argv[1])); print(m['current']['version']['display_name'])" "$METADATA" 2>/dev/null || true)
+          DIFF_TEX=$(python3 -c "import json,sys; m=json.load(open(sys.argv[1])); print(m['diff_files']['tex'])" "$METADATA" 2>/dev/null || true)
+          DIFF_PDF=$(python3 -c "import json,sys; m=json.load(open(sys.argv[1])); print(m['diff_files']['pdf'])" "$METADATA" 2>/dev/null || true)
+
+          echo "version-name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "metadata-path=$METADATA" >> "$GITHUB_OUTPUT"
+          [[ -n "$VERSION_NAME" && -f "$INPUT_OUTPUT_DIR/$VERSION_NAME.pdf" ]] && echo "pdf-path=$INPUT_OUTPUT_DIR/$VERSION_NAME.pdf" >> "$GITHUB_OUTPUT"
+          [[ -n "$DIFF_TEX" && -f "$INPUT_OUTPUT_DIR/$DIFF_TEX" ]] && echo "diff-tex-path=$INPUT_OUTPUT_DIR/$DIFF_TEX" >> "$GITHUB_OUTPUT"
+          [[ -n "$DIFF_PDF" && -f "$INPUT_OUTPUT_DIR/$DIFF_PDF" ]] && echo "diff-pdf-path=$INPUT_OUTPUT_DIR/$DIFF_PDF" >> "$GITHUB_OUTPUT"
+        fi

@@ -4,7 +4,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-xetex \
     texlive-latex-extra \
     texlive-fonts-recommended \
-    texlive-lang-chinese \
     texlive-bibtex-extra \
     biber \
     latexdiff \
@@ -17,8 +16,4 @@ WORKDIR /app
 COPY . .
 RUN uv sync --no-dev
 
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Direct CLI usage (e.g. docker run)
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["uv", "run", "latex-builder"]

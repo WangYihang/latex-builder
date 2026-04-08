@@ -65,6 +65,11 @@ jobs:
 | `skip-diff` | `false` | Build current version only |
 | `diff-only` | `false` | Generate diff .tex without building PDFs |
 | `verbose` | `false` | Enable debug logging |
+| `texlive-packages` | *(empty)* | Extra TeXLive packages to install (space-separated) |
+
+> The Action uses a **composite** runner (not Docker), so TeXLive is installed
+> on the GitHub-hosted runner and **cached automatically** between runs.
+> First run takes ~2 minutes; subsequent runs with cache hit take ~10 seconds.
 
 ### Outputs
 
