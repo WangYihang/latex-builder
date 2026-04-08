@@ -38,8 +38,48 @@ def inject_pdf_metadata(tex_path: Path, metadata: dict[str, str]) -> None:
         logger.debug("pdf metadata injected", path=str(tex_path))
 
 
+def inject_diff_banner(
+    tex_path: Path,
+    *,
+    old_version: str,
+    new_version: str,
+    old_hash: str,
+    new_hash: str,
+    author: str,
+    date: str,
+) -> None:
+    """Inject a visible info box at the top of the first page of a diff .tex.
+
+    Uses only basic LaTeX commands (fbox/parbox) — no extra packages,
+    no page style changes, so it won't conflict with the document's
+    existing headers/footers.
+    """
+    content = tex_path.read_text(encoding="utf-8")
+    marker = r"\begin{document}"
+    if marker not in content:
+        return
+
+    esc = _latex_escape
+    banner = (
+        "\n% -- diff info box injected by latex-builder --\n"
+        "\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{%\n"
+        "\\small\\bfseries LaTeX Diff Report\\\\[2pt]\n"
+        "\\normalfont\\small\n"
+        f"\\textbf{{Old:}} \\texttt{{{old_hash}}} ({esc(old_version)})\\hfill\n"
+        f"\\textbf{{New:}} \\texttt{{{new_hash}}} ({esc(new_version)})\\\\[2pt]\n"
+        f"\\textbf{{Author:}} {esc(author)}\\hfill\n"
+        f"\\textbf{{Date:}} {esc(date)}\n"
+        "}}\\par\\bigskip\n"
+        "% -- end diff info box --\n"
+    )
+
+    content = content.replace(marker, marker + banner, 1)
+    tex_path.write_text(content, encoding="utf-8")
+    logger.debug("diff banner injected", path=str(tex_path))
+
+
 def _latex_escape(s: str) -> str:
-    """Escape characters that are special in LaTeX hypersetup values."""
+    """Escape characters that are special in LaTeX."""
     for ch in ("\\", "{", "}", "#", "%", "&", "_"):
         s = s.replace(ch, f"\\{ch}")
     return s

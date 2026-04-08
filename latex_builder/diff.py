@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Iterator
 
 from latex_builder import compiler, log
-from latex_builder.compiler import inject_pdf_metadata
+from latex_builder.compiler import inject_diff_banner, inject_pdf_metadata
 from latex_builder.config import Config
 from latex_builder.git import GitRepo
 from latex_builder.revision import Revision
@@ -81,6 +81,15 @@ def _build_diff(repo: GitRepo, current: Revision, compare: Revision, cfg: Config
         )
 
         inject_pdf_metadata(diff_tex, _diff_pdf_metadata(current, compare, cfg))
+        inject_diff_banner(
+            diff_tex,
+            old_version=compare.display_name,
+            new_version=current.display_name,
+            old_hash=compare.short_hash,
+            new_hash=current.short_hash,
+            author=current.author_name or "Unknown",
+            date=datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        )
 
         compiler.build(
             f"{stem}.tex",

@@ -6,7 +6,7 @@ from textwrap import dedent
 
 import pytest
 
-from latex_builder.compiler import build, inject_pdf_metadata, latexdiff
+from latex_builder.compiler import build, inject_diff_banner, inject_pdf_metadata, latexdiff
 from latex_builder.config import Compiler
 
 
@@ -141,3 +141,51 @@ class TestInjectPdfMetadata:
         inject_pdf_metadata(tex, {"pdftitle": "Title", "pdfauthor": ""})
         content = tex.read_text()
         assert "pdfauthor" not in content
+
+
+class TestInjectDiffBanner:
+    def _make_tex(self, tmp_path):
+        tex = tmp_path / "diff.tex"
+        tex.write_text(
+            r"\documentclass{article}" + "\n" + r"\begin{document}" + "\nContent\n" + r"\end{document}"
+        )
+        return tex
+
+    def test_inserts_info_box(self, tmp_path):
+        tex = self._make_tex(tmp_path)
+        inject_diff_banner(
+            tex, old_version="v0.9.0-abc1234", new_version="v1.0.0-def5678",
+            old_hash="abc1234", new_hash="def5678", author="Alice", date="2024-01-01",
+        )
+        content = tex.read_text()
+        assert "LaTeX Diff Report" in content
+        assert "abc1234" in content
+        assert "def5678" in content
+        assert "Alice" in content
+
+    def test_box_after_begin_document(self, tmp_path):
+        tex = self._make_tex(tmp_path)
+        inject_diff_banner(
+            tex, old_version="old", new_version="new",
+            old_hash="aaa", new_hash="bbb", author="A", date="D",
+        )
+        content = tex.read_text()
+        assert content.index(r"\begin{document}") < content.index("Diff Report")
+
+    def test_no_fancyhdr(self, tmp_path):
+        """Should not use fancyhdr (avoids footer conflicts)."""
+        tex = self._make_tex(tmp_path)
+        inject_diff_banner(
+            tex, old_version="old", new_version="new",
+            old_hash="aaa", new_hash="bbb", author="A", date="D",
+        )
+        assert "fancyhdr" not in tex.read_text()
+
+    def test_skips_if_no_begin_document(self, tmp_path):
+        tex = tmp_path / "frag.tex"
+        tex.write_text("just a fragment")
+        inject_diff_banner(
+            tex, old_version="old", new_version="new",
+            old_hash="aaa", new_hash="bbb", author="A", date="D",
+        )
+        assert "Diff Report" not in tex.read_text()
