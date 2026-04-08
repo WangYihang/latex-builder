@@ -1,6 +1,6 @@
 """LaTeX Builder - A tool for building LaTeX documents with Git integration."""
 
-__version__ = "0.1.0"
+__version__ = "0.0.15"
 
 from .config.settings import Config
 from .git.revision import GitRevision

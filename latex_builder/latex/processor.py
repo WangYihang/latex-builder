@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from latex_builder.config.settings import SUPPORTED_COMPILERS
 from latex_builder.utils.logging import get_logger
 from latex_builder.utils.command import run_latex_command
 
@@ -24,12 +25,13 @@ class LaTeXProcessor:
         self.base_dir = base_dir or Path.cwd()
         logger.info("LaTeX processor initialized", base_dir=str(self.base_dir))
     
-    def build_document(self, 
-                      tex_file: str, 
-                      working_dir: Optional[Path] = None, 
-                      output_folder: Optional[Path] = None, 
+    def build_document(self,
+                      tex_file: str,
+                      working_dir: Optional[Path] = None,
+                      output_folder: Optional[Path] = None,
                       output_filename: str = "main.pdf",
-                      compiler: str = "xelatex") -> None:
+                      compiler: str = "xelatex",
+                      timeout: int = 300) -> None:
         """Build LaTeX document using specified compiler and bibtex.
         
         Args:
@@ -54,7 +56,7 @@ class LaTeXProcessor:
         
         try:
             logger.info("Starting LaTeX compilation process")
-            self._run_latex_commands(tex_file, cwd, compiler)
+            self._run_latex_commands(tex_file, cwd, compiler, timeout=timeout)
             
             basename = Path(tex_file).stem
             pdf_file = cwd / f"{basename}.pdf"
@@ -78,11 +80,13 @@ class LaTeXProcessor:
             else:
                 logger.error("PDF file not found", expected_path=str(pdf_file))
                 raise RuntimeError(f"PDF file not found: {pdf_file}")
+        except RuntimeError:
+            raise
         except Exception as e:
             logger.error("LaTeX build failed", error=str(e))
             raise RuntimeError(f"LaTeX build failed: {repr(e)}")
     
-    def _run_latex_commands(self, tex_file: str, cwd: Path, compiler: str = "xelatex") -> None:
+    def _run_latex_commands(self, tex_file: str, cwd: Path, compiler: str = "xelatex", timeout: int = 300) -> None:
         """Run LaTeX commands to compile document.
         
         Args:
@@ -95,29 +99,30 @@ class LaTeXProcessor:
         """
         basename = Path(tex_file).stem
         
-        # Validate compiler
-        valid_compilers = ["xelatex", "pdflatex", "lualatex"]
-        if compiler not in valid_compilers:
-            raise RuntimeError(f"Unsupported compiler: {compiler}. Valid options: {valid_compilers}")
+        if compiler not in SUPPORTED_COMPILERS:
+            raise RuntimeError(f"Unsupported compiler: {compiler}. Valid options: {SUPPORTED_COMPILERS}")
         
         logger.info(f"Running {compiler} first pass")
         cmd_start = time.time()
-        run_latex_command([compiler, "-shell-escape", tex_file], cwd)
+        run_latex_command([compiler, "-shell-escape", tex_file], cwd, timeout=timeout)
         logger.debug(f"{compiler} first pass completed", duration=f"{time.time() - cmd_start:.2f}s")
-        
+
         logger.info("Running bibtex")
         cmd_start = time.time()
-        run_latex_command(["bibtex", basename], cwd)
-        logger.debug("bibtex completed", duration=f"{time.time() - cmd_start:.2f}s")
-        
+        try:
+            run_latex_command(["bibtex", basename], cwd, timeout=timeout)
+            logger.debug("bibtex completed", duration=f"{time.time() - cmd_start:.2f}s")
+        except RuntimeError:
+            logger.warning("bibtex failed (may be expected if no bibliography is used)")
+
         logger.info(f"Running {compiler} second pass")
         cmd_start = time.time()
-        run_latex_command([compiler, "-shell-escape", tex_file], cwd)
+        run_latex_command([compiler, "-shell-escape", tex_file], cwd, timeout=timeout)
         logger.debug(f"{compiler} second pass completed", duration=f"{time.time() - cmd_start:.2f}s")
-        
+
         logger.info(f"Running {compiler} final pass")
         cmd_start = time.time()
-        run_latex_command([compiler, "-shell-escape", tex_file], cwd)
+        run_latex_command([compiler, "-shell-escape", tex_file], cwd, timeout=timeout)
         logger.debug(f"{compiler} final pass completed", duration=f"{time.time() - cmd_start:.2f}s")
         
         logger.info("LaTeX compilation sequence completed", tex_file=tex_file, compiler=compiler)
@@ -150,7 +155,7 @@ class LaTeXProcessor:
             
             logger.info("Running latexdiff with flatten option")
             
-            # 运行latexdiff命令并捕获输出
+            # Run latexdiff and capture output
             result = subprocess.run([
                 "latexdiff", 
                 "--flatten", 
@@ -158,7 +163,7 @@ class LaTeXProcessor:
                 str(modified_file)
             ], capture_output=True, text=True, check=True)
             
-            # 将输出保存到文件
+            # Write diff output to file
             logger.info("Writing diff output", output_file=str(output_file))
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(result.stdout)

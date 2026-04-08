@@ -21,8 +21,6 @@ class GitRevision:
     author_email: Optional[str] = None
     commit_summary: Optional[str] = None
     commit_message: Optional[str] = None
-    commit_date: Optional[datetime.datetime] = None
-    commit_date_iso: Optional[str] = None
 
     @property
     def short_hash(self) -> str:
@@ -30,12 +28,19 @@ class GitRevision:
         return self.commit_hash[:7]
 
     @property
+    def commit_date_iso(self) -> Optional[str]:
+        """Return commit date as ISO 8601 string, derived from timestamp."""
+        if self.timestamp:
+            return self.timestamp.isoformat()
+        return None
+
+    @property
     def display_name(self) -> str:
         """Return a human-readable display name for the revision."""
         # Use version_name if available, otherwise fall back to old logic
         if self.version_name:
             return self.version_name
-        
+
         # Start with the most specific identifier
         if self.tag_name:
             prefix = [self.tag_name]

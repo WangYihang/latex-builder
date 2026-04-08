@@ -91,8 +91,7 @@ class TestGitRevisionDataclass:
         assert rev.author_email is None
         assert rev.commit_summary is None
         assert rev.commit_message is None
-        assert rev.commit_date is None
-        assert rev.commit_date_iso is None
+        assert rev.commit_date_iso is None  # derived from timestamp
 
     def test_all_fields_populated(self, sample_revision):
         rev = sample_revision

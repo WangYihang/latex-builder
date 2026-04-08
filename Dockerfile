@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-xetex \
@@ -15,6 +15,6 @@ RUN pip install uv
 
 WORKDIR /app
 COPY . .
-RUN uv sync
+RUN uv sync --no-dev
 
 ENTRYPOINT ["uv", "run", "latex-builder"]

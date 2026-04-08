@@ -5,6 +5,7 @@ import sys
 import time
 from pathlib import Path
 
+from latex_builder.cli.parser import parse_arguments
 from latex_builder.config.settings import Config
 from latex_builder.git.repository import GitRepository
 from latex_builder.latex.processor import LaTeXProcessor
@@ -116,8 +117,6 @@ class LatexDiffTool:
 
 def main() -> int:
     """Main entry point for the CLI."""
-    from latex_builder.cli.parser import parse_arguments
-
     logger.info(
         "LaTeX Diff Tool starting", python_version=sys.version, working_dir=os.getcwd()
     )
@@ -147,6 +146,7 @@ def main() -> int:
             revision_file=getattr(args, "revision_file", "variables/revision.tex"),
             output_dir=Path(getattr(args, "output_dir", "output")),
             build_dir=Path(getattr(args, "build_dir", "build")),
+            timeout=getattr(args, "timeout", 300),
             no_diff=getattr(args, "no_diff", False),
             diff_only=getattr(args, "diff_only", False),
             verbose=getattr(args, "verbose", False),

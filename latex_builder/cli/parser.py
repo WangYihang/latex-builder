@@ -2,6 +2,7 @@
 
 import argparse
 
+from latex_builder.config.settings import SUPPORTED_COMPILERS
 from latex_builder.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -34,7 +35,7 @@ def parse_arguments():
     )
     main_parser.add_argument(
         "-c", "--compiler",
-        choices=["xelatex", "pdflatex", "lualatex"],
+        choices=SUPPORTED_COMPILERS,
         default="xelatex",
         help="LaTeX compiler to use (default: xelatex)"
     )
@@ -53,6 +54,10 @@ def parse_arguments():
     main_parser.add_argument(
         "--revision-file", default="variables/revision.tex",
         help="Path for generated revision.tex file (default: variables/revision.tex)"
+    )
+    main_parser.add_argument(
+        "-t", "--timeout", type=int, default=300,
+        help="Timeout in seconds for each LaTeX command (default: 300)"
     )
     main_parser.add_argument(
         "--no-diff", action="store_true",

@@ -28,6 +28,8 @@ class GitRepository:
         self.repo_path = repo_path or Path.cwd()
         logger.info("Initializing Git repository", path=str(self.repo_path))
 
+        self._tag_cache = None  # lazily populated by _get_tag_map()
+
         try:
             self.repo = git.Repo(self.repo_path)
             logger.info(
@@ -45,15 +47,15 @@ class GitRepository:
 
     def is_working_tree_dirty(self) -> bool:
         """Check if working tree has uncommitted changes.
-        
+
         Returns:
             True if working tree is dirty, False otherwise
         """
         try:
             return self.repo.is_dirty()
         except Exception as e:
-            logger.warning(f"Failed to check working tree status: {e}")
-            return False
+            logger.error("Failed to check working tree status, assuming dirty", error=str(e))
+            return True
 
     def parse_semver(self, version: str) -> Optional[semver.Version]:
         """Parse semantic version string using semver library.
@@ -172,7 +174,7 @@ class GitRepository:
         """
         logger.info("Getting current Git revision")
         commit = self.repo.head.commit
-        commit_date = datetime.datetime.fromtimestamp(commit.authored_date).strftime(
+        commit_date = datetime.datetime.fromtimestamp(commit.authored_date, tz=timezone.utc).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
         logger.info(
@@ -243,7 +245,7 @@ class GitRepository:
         )
         logger.info(
             f"  • Authored by: {previous.author.name} on "
-            f"{datetime.datetime.fromtimestamp(previous.authored_date).strftime('%Y-%m-%d %H:%M:%S')}"
+            f"{datetime.datetime.fromtimestamp(previous.authored_date, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
         )
 
         tag_name = self._find_tag_for_commit(previous)
@@ -336,6 +338,14 @@ class GitRepository:
             logger.warning(f"  • Reference '{ref}' not found: {str(e)}")
             return None
 
+    def _get_tag_map(self) -> dict:
+        """Build and cache a mapping from commit hex to tag name."""
+        if self._tag_cache is None:
+            self._tag_cache = {}
+            for tag in self.repo.tags:
+                self._tag_cache[tag.commit.hexsha] = tag.name
+        return self._tag_cache
+
     def _find_tag_for_commit(self, commit) -> Optional[str]:
         """
         Find tag name for a commit.
@@ -346,13 +356,11 @@ class GitRepository:
         Returns:
             Tag name or None if no tag
         """
-        logger.debug(f"Searching for tags on commit {commit.hexsha[:7]}")
-        for tag in self.repo.tags:
-            if tag.commit == commit:
-                logger.debug(f"  • Found tag: {tag.name}")
-                return tag.name
-        logger.debug(f"  • No tags found for commit {commit.hexsha[:7]}")
-        return None
+        tag_map = self._get_tag_map()
+        tag_name = tag_map.get(commit.hexsha)
+        if tag_name:
+            logger.debug("Found tag for commit", hash=commit.hexsha[:7], tag=tag_name)
+        return tag_name
 
     def _create_revision(
         self,
@@ -387,8 +395,6 @@ class GitRepository:
             author_email=commit.author.email,
             commit_summary=commit.summary,
             commit_message=commit.message,
-            commit_date=commit_timestamp,
-            commit_date_iso=commit_timestamp.isoformat(),
         )
         revision.version_name = self.generate_version_name(revision)
         logger.info(f"  • Version name: {revision.version_name}")
@@ -413,20 +419,18 @@ class GitRepository:
                 logger.info(f"  • Creating directory: {output_path.parent}")
                 output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            """
-            \newcommand{\GitCommit}{1b7cec2}
-            \newcommand{\GitTag}{v0.0.1}
-            \newcommand{\GitBranch}{main}
-            \newcommand{\GitRevision}{1b7cec2-v0.0.1-main}
-            \newcommand{\CompiledDate}{2023-10-01T12:00:00Z}
-            """
-
+            # Output format example:
+            #   \newcommand{\GitCommit}{1b7cec2}
+            #   \newcommand{\GitTag}{v0.0.1}
+            #   \newcommand{\GitBranch}{main}
+            #   \newcommand{\GitRevision}{1b7cec2-v0.0.1-main}
+            #   \newcommand{\CompiledDate}{2023-10-01T12:00:00Z}
             data = {
                 "GitCommit": revision.commit_hash[0:7],
                 "GitTag": revision.tag_name or "",
                 "GitBranch": revision.branch_name,
                 "GitRevision": revision.display_name,
-                "CompiledDate": datetime.datetime.now().isoformat(),
+                "CompiledDate": datetime.datetime.now(tz=timezone.utc).isoformat(),
             }
 
             logger.info("  • Writing the following data to revision file:")

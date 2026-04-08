@@ -2,6 +2,7 @@
 
 import json
 import datetime
+from datetime import timezone
 import tempfile
 from pathlib import Path
 from typing import Dict
@@ -148,7 +149,10 @@ class DiffGenerator:
         finally:
             import shutil
             logger.info(f"Cleaning up playground directory: {playground_dir}")
-            shutil.rmtree(playground_dir, ignore_errors=True)
+            try:
+                shutil.rmtree(playground_dir)
+            except OSError as e:
+                logger.warning("Failed to clean up playground directory", path=str(playground_dir), error=str(e))
     
     def _build_current_version(self, current: GitRevision) -> None:
         """
@@ -169,11 +173,12 @@ class DiffGenerator:
         # Build document
         logger.info(f"    - Building LaTeX document")
         self.latex_processor.build_document(
-            self.config.tex_file, 
-            original_dir, 
-            self.output_folder, 
+            self.config.tex_file,
+            original_dir,
+            self.output_folder,
             f"{current.display_name}.pdf",
-            self.config.compiler
+            self.config.compiler,
+            timeout=self.config.timeout,
         )
         logger.info(f"    - Current version build completed")
     
@@ -284,14 +289,18 @@ class DiffGenerator:
                 checkout_dirs["compare"],
                 self.output_folder,
                 diff_pdf_name,
-                self.config.compiler
+                self.config.compiler,
+                timeout=self.config.timeout,
             )
 
             logger.info(f"    - Diff document built successfully")
         finally:
             import shutil
             logger.info(f"    - Cleaning up playground directory: {playground_dir}")
-            shutil.rmtree(playground_dir, ignore_errors=True)
+            try:
+                shutil.rmtree(playground_dir)
+            except OSError as e:
+                logger.warning("Failed to clean up playground directory", path=str(playground_dir), error=str(e))
     
     def _save_metadata(self, 
                       current: GitRevision, 
@@ -334,7 +343,7 @@ class DiffGenerator:
         # Create detailed metadata with nested structure
         metadata = {
             "diff_generation": {
-                "timestamp": datetime.datetime.now().isoformat(),
+                "timestamp": datetime.datetime.now(tz=timezone.utc).isoformat(),
                 "settings": {
                     "tex_file": self.config.tex_file,
                     "compiler": self.config.compiler,

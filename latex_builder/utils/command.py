@@ -24,7 +24,7 @@ def run_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) 
     cmd_str = " ".join(cmd)
     logger.debug("Executing command", command=cmd_str, working_dir=str(cwd), timeout=timeout)
 
-    # 使用非交互式模式，避免等待用户输入
+    # Use non-interactive mode to avoid waiting for user input
     env = dict(os.environ)
     env.update({
         'LATEX_INTERACTION': 'batchmode',
@@ -70,15 +70,15 @@ def run_latex_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int =
     Raises:
         RuntimeError: If command execution fails or times out
     """
-    # 为LaTeX命令添加非交互式参数
+    # Add non-interactive flags for LaTeX commands
     latex_cmd = cmd.copy()
-    
-    # 检查是否已经包含非交互式参数
+
+    # Check if an interactive flag is already present
     interactive_flags = ['-interaction=nonstopmode', '-interaction=batchmode', '-interaction=scrollmode']
     has_interactive_flag = any(flag in ' '.join(latex_cmd) for flag in interactive_flags)
     
     if not has_interactive_flag:
-        # 在命令中添加非交互式模式
+        # Insert non-interactive mode flag for LaTeX compilers
         if latex_cmd[0] in ['xelatex', 'pdflatex', 'lualatex']:
             latex_cmd.insert(1, '-interaction=nonstopmode')
     

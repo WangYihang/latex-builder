@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+SUPPORTED_COMPILERS = ["xelatex", "pdflatex", "lualatex"]
+
 
 @dataclass
 class Config:
@@ -15,6 +17,7 @@ class Config:
     revision_file: str = "variables/revision.tex"
     output_dir: Path = Path("output")
     build_dir: Path = Path("build")
+    timeout: int = 300
     no_diff: bool = False
     diff_only: bool = False
     verbose: bool = False

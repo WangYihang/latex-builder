@@ -33,8 +33,6 @@ def sample_revision():
         author_email="test@example.com",
         commit_summary="Initial commit",
         commit_message="Initial commit\n\nDetailed description",
-        commit_date=datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
-        commit_date_iso="2024-01-01T12:00:00+00:00",
     )
 
 
@@ -53,8 +51,6 @@ def compare_revision():
         author_email="other@example.com",
         commit_summary="Previous release",
         commit_message="Previous release",
-        commit_date=datetime.datetime(2023, 12, 15, 10, 0, 0, tzinfo=timezone.utc),
-        commit_date_iso="2023-12-15T10:00:00+00:00",
     )
 
 
