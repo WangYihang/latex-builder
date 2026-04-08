@@ -1,19 +1,9 @@
-"""LaTeX Builder - A tool for building LaTeX documents with Git integration."""
+"""LaTeX Builder — build LaTeX documents with Git integration and diff generation."""
 
 __version__ = "0.0.15"
 
-from .config.settings import Config
-from .git.revision import GitRevision
-from .git.repository import GitRepository
-from .latex.processor import LaTeXProcessor
-from .diff.generator import DiffGenerator
-from .cli.main import LatexDiffTool
+from latex_builder.config import Compiler, Config
+from latex_builder.revision import Revision
+from latex_builder.git import GitRepo
 
-__all__ = [
-    "Config",
-    "GitRevision",
-    "GitRepository",
-    "LaTeXProcessor",
-    "DiffGenerator",
-    "LatexDiffTool",
-]
+__all__ = ["Compiler", "Config", "Revision", "GitRepo", "__version__"]
