@@ -11,7 +11,7 @@ from pathlib import Path
 import git as gitpython
 import semver
 
-from latex_builder import log
+from latex_builder import __author_github__, __repo_url__, __version__, log
 from latex_builder.revision import Revision
 
 logger = log.get(__name__)
@@ -119,7 +119,7 @@ class GitRepo:
             rf"  pdfauthor={{{author}}},",
             rf"  pdfsubject={{Version: {rev.display_name}}},",
             rf"  pdfkeywords={{git commit {rev.short_hash}, {rev.tag or 'untagged'}, {rev.branch or ''}}},",
-            rf"  pdfcreator={{latex-builder}},",
+            rf"  pdfcreator={{latex-builder v{__version__} ({__repo_url__}) by @{__author_github__}}},",
             r"}",
             r"\fi",
         ]
