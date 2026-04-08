@@ -105,7 +105,7 @@ def _checkout_pair(
 
 
 def _diff_stem(compare: Revision, current: Revision) -> str:
-    return f"{compare.display_name}-vs-{current.display_name}"
+    return f"diff-{compare.short_hash}-vs-{current.short_hash}"
 
 
 @contextmanager

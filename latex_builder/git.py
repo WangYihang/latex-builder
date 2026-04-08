@@ -119,7 +119,15 @@ class GitRepo:
     # ------------------------------------------------------------------
 
     def version_name_for(self, rev: Revision) -> str:
-        """Generate a GoReleaser-style version string."""
+        """Generate a GoReleaser-style version string.
+
+        Format:
+          tagged:   v1.2.3-a1b2c3d
+          untagged: v1.2.4-snapshot-a1b2c3d
+          dirty:    v1.2.4-snapshot-a1b2c3d-dirty
+
+        Timestamps are recorded in metadata.json, not in the filename.
+        """
         if rev.tag:
             parts = [rev.tag, rev.short_hash]
         else:
@@ -128,9 +136,6 @@ class GitRepo:
 
         if rev.is_dirty:
             parts.append("dirty")
-
-        if rev.timestamp:
-            parts.append(rev.timestamp.strftime("%Y%m%d%H%M%S"))
 
         return "-".join(parts)
 

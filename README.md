@@ -131,16 +131,16 @@ Follows GoReleaser-style naming:
 
 | Scenario | Format | Example |
 |----------|--------|---------|
-| Tagged commit | `{tag}-{hash}-{timestamp}` | `v1.2.3-abc1234-20240101120000` |
-| Untagged commit | `{next}-snapshot-{hash}-{timestamp}` | `v1.2.4-snapshot-abc1234-20240101120000` |
-| Dirty tree | adds `-dirty` | `v1.2.4-snapshot-abc1234-dirty-20240101120000` |
+| Tagged commit | `{tag}-{hash}` | `v1.2.3-abc1234` |
+| Untagged commit | `{next}-snapshot-{hash}` | `v1.2.4-snapshot-abc1234` |
+| Dirty tree | adds `-dirty` | `v1.2.4-snapshot-abc1234-dirty` |
 
 ## Output files
 
-- `{version}.pdf` — current version PDF
-- `{old}-vs-{new}.tex` — diff LaTeX source
-- `{old}-vs-{new}.pdf` — diff PDF
-- `metadata.json` — build metadata
+- `{version}.pdf` — current version PDF (e.g. `v1.2.4-snapshot-abc1234.pdf`)
+- `diff-{old_hash}-vs-{new_hash}.tex` — diff LaTeX source
+- `diff-{old_hash}-vs-{new_hash}.pdf` — diff PDF
+- `metadata.json` — build metadata (includes timestamps, full version names)
 - `revision.tex` — LaTeX macros (`\GitCommit`, `\GitTag`, `\GitBranch`, `\GitRevision`, `\CompiledDate`)
 
 ## Requirements
