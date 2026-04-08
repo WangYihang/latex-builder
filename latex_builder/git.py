@@ -102,14 +102,26 @@ class GitRepo:
     # ------------------------------------------------------------------
 
     def write_revision_tex(self, rev: Revision, dest: Path) -> None:
-        """Write a revision.tex with LaTeX \\newcommand macros."""
+        """Write a revision.tex with LaTeX \\newcommand macros and PDF metadata."""
         dest.parent.mkdir(parents=True, exist_ok=True)
+        compiled = datetime.datetime.now(tz=timezone.utc).isoformat()
+        author = rev.author_name or ""
         lines = [
             rf"\newcommand{{\GitCommit}}{{{rev.short_hash}}}",
             rf"\newcommand{{\GitTag}}{{{rev.tag or ''}}}",
             rf"\newcommand{{\GitBranch}}{{{rev.branch or ''}}}",
             rf"\newcommand{{\GitRevision}}{{{rev.display_name}}}",
-            rf"\newcommand{{\CompiledDate}}{{{datetime.datetime.now(tz=timezone.utc).isoformat()}}}",
+            rf"\newcommand{{\CompiledDate}}{{{compiled}}}",
+            "",
+            r"% PDF metadata (requires hyperref loaded by the document)",
+            r"\ifdefined\hypersetup",
+            r"\hypersetup{",
+            rf"  pdfauthor={{{author}}},",
+            rf"  pdfsubject={{Version: {rev.display_name}}},",
+            rf"  pdfkeywords={{git commit {rev.short_hash}, {rev.tag or 'untagged'}, {rev.branch or ''}}},",
+            rf"  pdfcreator={{latex-builder}},",
+            r"}",
+            r"\fi",
         ]
         dest.write_text("\n".join(lines), encoding="utf-8")
         logger.debug("wrote revision.tex", path=str(dest))

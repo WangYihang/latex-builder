@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -10,6 +11,38 @@ from latex_builder import log, shell
 from latex_builder.config import Compiler
 
 logger = log.get(__name__)
+
+
+def inject_pdf_metadata(tex_path: Path, metadata: dict[str, str]) -> None:
+    """Inject PDF metadata into a .tex file via hyperref.
+
+    Inserts a \\hypersetup block right before \\begin{document}.
+    If hyperref is not loaded, adds \\usepackage{hyperref} first.
+    """
+    content = tex_path.read_text(encoding="utf-8")
+
+    # Build hypersetup key-value pairs, escaping special LaTeX chars
+    kv_pairs = ",\n    ".join(f"{k}={{{_latex_escape(v)}}}" for k, v in metadata.items() if v)
+    snippet = (
+        "\n% -- PDF metadata injected by latex-builder --\n"
+        "\\ifdefined\\hypersetup\\else\\usepackage{hyperref}\\fi\n"
+        f"\\hypersetup{{\n    {kv_pairs}\n}}\n"
+        "% -- end latex-builder metadata --\n"
+    )
+
+    # Insert before \begin{document}
+    marker = r"\begin{document}"
+    if marker in content:
+        content = content.replace(marker, snippet + marker, 1)
+        tex_path.write_text(content, encoding="utf-8")
+        logger.debug("pdf metadata injected", path=str(tex_path))
+
+
+def _latex_escape(s: str) -> str:
+    """Escape characters that are special in LaTeX hypersetup values."""
+    for ch in ("\\", "{", "}", "#", "%", "&", "_"):
+        s = s.replace(ch, f"\\{ch}")
+    return s
 
 
 def build(

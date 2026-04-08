@@ -28,8 +28,9 @@ class TestRevisionSubcommand:
 
 class TestBuildSubcommand:
     @patch("latex_builder.diff.compiler.build")
+    @patch("latex_builder.diff.inject_pdf_metadata")
     @patch("latex_builder.diff.compiler.latexdiff")
-    def test_full_workflow(self, mock_diff, mock_build, runner, git_repo):
+    def test_full_workflow(self, mock_diff, mock_inject, mock_build, runner, git_repo):
         mock_build.return_value = git_repo / "output" / "test.pdf"
         mock_diff.return_value = git_repo / "output" / "diff.tex"
 

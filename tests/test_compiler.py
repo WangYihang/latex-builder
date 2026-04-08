@@ -2,10 +2,11 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from textwrap import dedent
 
 import pytest
 
-from latex_builder.compiler import build, latexdiff
+from latex_builder.compiler import build, inject_pdf_metadata, latexdiff
 from latex_builder.config import Compiler
 
 
@@ -101,3 +102,42 @@ class TestLatexdiff:
 
         latexdiff(old, new, tmp_path / "d.tex")
         assert "--flatten" in mock_run.call_args.args[0]
+
+
+class TestInjectPdfMetadata:
+    def test_injects_before_begin_document(self, tmp_path):
+        tex = tmp_path / "test.tex"
+        tex.write_text(dedent(r"""
+            \documentclass{article}
+            \begin{document}
+            Hello
+            \end{document}
+        """).strip())
+
+        inject_pdf_metadata(tex, {"pdftitle": "My Title", "pdfauthor": "Alice"})
+        content = tex.read_text()
+
+        assert r"\hypersetup{" in content
+        assert "My Title" in content
+        assert "Alice" in content
+        assert content.index(r"\hypersetup{") < content.index(r"\begin{document}")
+
+    def test_skips_if_no_begin_document(self, tmp_path):
+        tex = tmp_path / "frag.tex"
+        tex.write_text("just a fragment")
+        inject_pdf_metadata(tex, {"pdftitle": "X"})
+        assert r"\hypersetup" not in tex.read_text()
+
+    def test_escapes_special_chars(self, tmp_path):
+        tex = tmp_path / "test.tex"
+        tex.write_text(r"\documentclass{article}" + "\n" + r"\begin{document}" + "\nHi\n" + r"\end{document}")
+        inject_pdf_metadata(tex, {"pdftitle": "100% done & ready"})
+        content = tex.read_text()
+        assert r"100\% done \& ready" in content
+
+    def test_empty_values_skipped(self, tmp_path):
+        tex = tmp_path / "test.tex"
+        tex.write_text(r"\documentclass{article}" + "\n" + r"\begin{document}" + "\n" + r"\end{document}")
+        inject_pdf_metadata(tex, {"pdftitle": "Title", "pdfauthor": ""})
+        content = tex.read_text()
+        assert "pdfauthor" not in content
