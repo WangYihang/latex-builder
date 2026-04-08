@@ -1,0 +1,71 @@
+name: "LaTeX Builder"
+description: "Build LaTeX documents with Git-based versioning and diff generation"
+author: "WangYihang"
+
+branding:
+  icon: "file-text"
+  color: "blue"
+
+inputs:
+  tex-file:
+    description: "Main .tex file to compile"
+    required: false
+    default: "main.tex"
+  compiler:
+    description: "LaTeX compiler (xelatex, pdflatex, lualatex)"
+    required: false
+    default: "xelatex"
+  compare-with:
+    description: "Git tag or commit to compare against (auto-detect if omitted)"
+    required: false
+    default: ""
+  output-dir:
+    description: "Directory for output files"
+    required: false
+    default: "output"
+  timeout:
+    description: "Per-command timeout in seconds"
+    required: false
+    default: "300"
+  revision-file:
+    description: "Path for generated revision.tex"
+    required: false
+    default: "variables/revision.tex"
+  skip-diff:
+    description: "Build current version only, skip diff generation"
+    required: false
+    default: "false"
+  diff-only:
+    description: "Generate diff .tex without building PDFs"
+    required: false
+    default: "false"
+  verbose:
+    description: "Enable debug logging"
+    required: false
+    default: "false"
+
+outputs:
+  version-name:
+    description: "Generated version name for this build"
+  pdf-path:
+    description: "Path to the generated current-version PDF"
+  diff-pdf-path:
+    description: "Path to the generated diff PDF"
+  diff-tex-path:
+    description: "Path to the generated diff .tex file"
+  metadata-path:
+    description: "Path to metadata.json"
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  env:
+    INPUT_TEX_FILE: ${{ inputs.tex-file }}
+    INPUT_COMPILER: ${{ inputs.compiler }}
+    INPUT_COMPARE_WITH: ${{ inputs.compare-with }}
+    INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+    INPUT_TIMEOUT: ${{ inputs.timeout }}
+    INPUT_REVISION_FILE: ${{ inputs.revision-file }}
+    INPUT_SKIP_DIFF: ${{ inputs.skip-diff }}
+    INPUT_DIFF_ONLY: ${{ inputs.diff-only }}
+    INPUT_VERBOSE: ${{ inputs.verbose }}

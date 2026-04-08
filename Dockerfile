@@ -17,4 +17,8 @@ WORKDIR /app
 COPY . .
 RUN uv sync --no-dev
 
-ENTRYPOINT ["uv", "run", "latex-builder"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Direct CLI usage (e.g. docker run)
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,171 +1,161 @@
 # LaTeX Builder
 
-A Python tool for building LaTeX documents with Git version management and automatic diff generation.
+Build LaTeX documents with Git-based versioning and automatic diff generation.
 
 ## Features
 
-- **Git Integration**: Automatic detection of current commit, branch, and tag information
-- **LaTeX Compilation**: Complete compilation workflow using XeLaTeX and BibTeX
-- **Diff Generation**: Create visual differences between Git versions using latexdiff
-- **Version Management**: Generate version information files for LaTeX documents
-- **Clear Logging**: Beautiful command-line interface with clear progress indicators
-- **GoReleaser-like Versioning**: Smart version naming based on Git tags and working tree status
+- **Git integration** — automatic version naming based on tags, commits, and dirty state
+- **LaTeX compilation** — xelatex / pdflatex / lualatex with bibtex
+- **Diff generation** — visual diffs between Git versions via latexdiff
+- **GitHub Action** — use directly in CI/CD workflows
+- **CLI tool** — installable via pip / uvx for local use
 
-## Version Naming Logic
+## Use as a GitHub Action
 
-The tool uses GoReleaser-like version naming:
-
-- **Tag commits**: `{tag}-{commit}` (e.g., `v1.2.3-a1b2c3d`)
-- **Non-tag commits**: `{next_version}-snapshot-{commit}` (e.g., `v1.2.4-snapshot-a1b2c3d`)
-- **Dirty working tree**: `{version}-dirty-{commit}` (e.g., `v1.2.4-dirty-a1b2c3d`)
-
-Where `{next_version}` is the patch-bumped version of the latest semantic version tag.
-
-## Usage
-
-### Command Line
-
-```bash
-# Basic usage (in Git repository containing main.tex)
-pipx run latex-builder
-
-# Specify LaTeX file
-pipx run latex-builder -t document.tex
-
-# Specify output directory
-pipx run latex-builder -o build_output
-
-# Enable verbose output
-pipx run latex-builder -v
-
-# Full options
-pipx run latex-builder -t main.tex -r misc/revision.tex -o output -b build -v
+```yaml
+- uses: wangyihang/latex-builder@v1
+  with:
+    tex-file: main.tex
 ```
 
-### Generate Only revision.tex
+### Full example workflow
+
+```yaml
+name: Build LaTeX
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for diff against previous tags
+
+      - uses: wangyihang/latex-builder@v1
+        id: latex
+        with:
+          tex-file: main.tex
+          compiler: xelatex
+          output-dir: output
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: latex-output
+          path: |
+            ${{ steps.latex.outputs.pdf-path }}
+            ${{ steps.latex.outputs.diff-pdf-path }}
+            ${{ steps.latex.outputs.metadata-path }}
+```
+
+### Inputs
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `tex-file` | `main.tex` | Main .tex file to compile |
+| `compiler` | `xelatex` | LaTeX compiler (`xelatex`, `pdflatex`, `lualatex`) |
+| `compare-with` | *(auto)* | Git tag or commit to compare against |
+| `output-dir` | `output` | Directory for output files |
+| `timeout` | `300` | Per-command timeout in seconds |
+| `revision-file` | `variables/revision.tex` | Path for generated revision.tex |
+| `skip-diff` | `false` | Build current version only |
+| `diff-only` | `false` | Generate diff .tex without building PDFs |
+| `verbose` | `false` | Enable debug logging |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `version-name` | Generated version string (e.g. `v1.2.3-abc1234-20240101120000`) |
+| `pdf-path` | Path to the current-version PDF |
+| `diff-pdf-path` | Path to the diff PDF |
+| `diff-tex-path` | Path to the diff .tex source |
+| `metadata-path` | Path to `metadata.json` |
+
+## Use as a CLI tool
+
+### Install
 
 ```bash
-# Generate revision.tex only (no build or diff)
-pipx run latex-builder revision
+pip install latex-builder
+# or
+uvx latex-builder --help
+```
 
-# Specify output path for revision.tex
-pipx run latex-builder revision --revision-file misc/revision.tex
+### Commands
+
+```bash
+# Build and generate diffs (default)
+latex-builder build
+
+# Specify options
+latex-builder build -f thesis.tex -c pdflatex -o dist --compare-with v1.0.0
+
+# Build without diff
+latex-builder build --skip-diff
+
+# Generate diff .tex only (no PDF)
+latex-builder build --diff-only
+
+# Generate only revision.tex
+latex-builder revision
 ```
 
 ### Python API
 
 ```python
-from latex_builder import Config, LatexDiffTool
 from pathlib import Path
+from latex_builder import Config, Compiler, GitRepo
+from latex_builder.diff import build_and_diff
 
-# Create configuration
-config = Config(
-    tex_file="main.tex",
-    revision_path="misc/revision.tex",
-    output_folder=Path("output"),
-    build_dir=Path("build"),
-    verbose=True
-)
+repo = GitRepo(Path("."))
+current = repo.current_revision()
+compare = repo.auto_compare_target()
 
-# Run tool
-tool = LatexDiffTool(config)
-exit_code = tool.run()
+cfg = Config(compiler=Compiler.XELATEX, output_dir=Path("output"))
+build_and_diff(repo, current, compare, cfg)
 ```
 
-## Package Structure
+## Version naming
 
-```
-latex_builder/
-├── cli/                    # Command line interface
-│   ├── main.py            # Main application class
-│   └── parser.py          # Command line argument parsing
-├── config/                # Configuration management
-│   └── settings.py        # Configuration data classes
-├── diff/                  # Diff generation
-│   └── generator.py       # LaTeX diff operations
-├── git/                   # Git operations
-│   ├── repository.py      # Git repository handling
-│   └── revision.py        # Git version data structures
-├── latex/                 # LaTeX processing
-│   └── processor.py       # LaTeX compilation
-└── utils/                 # Shared utilities
-    ├── command.py         # Command execution
-    └── logging.py         # Logging setup
-```
+Follows GoReleaser-style naming:
 
-## Configuration Options
+| Scenario | Format | Example |
+|----------|--------|---------|
+| Tagged commit | `{tag}-{hash}-{timestamp}` | `v1.2.3-abc1234-20240101120000` |
+| Untagged commit | `{next}-snapshot-{hash}-{timestamp}` | `v1.2.4-snapshot-abc1234-20240101120000` |
+| Dirty tree | adds `-dirty` | `v1.2.4-snapshot-abc1234-dirty-20240101120000` |
 
-- `tex_file`: Main LaTeX file to compile (default: "main.tex")
-- `revision_path`: Path to revision.tex file (default: "variables/revision.tex")
-- `verbose`: Enable debug logging (default: False)
-- `output_folder`: Output files directory (default: "output")
-- `build_dir`: Temporary build files directory (default: "build")
+## Output files
 
-## Output Files
-
-The tool generates the following output files:
-
-- **Current Version PDF**: `{version-name}.pdf`
-- **Diff Files**: 
-  - **LaTeX Source**: `{compare-version}-vs-{current-version}.tex`
-  - **PDF Document**: `{compare-version}-vs-{current-version}.pdf`
-- **Metadata**: `metadata.json` containing detailed version information in a nested structure:
-  - `diff_generation/`: Generation settings and timestamp
-  - `revisions/`: Complete information for both current and compare revisions
-    - `commit/`: Hash, summary, message, date
-    - `author/`: Name and email
-    - `version/`: Display name, version name, tag, dirty status
-    - `git/`: Branch and reference information
-  - `files/`: Generated diff file names
-  - `repository/`: Repository and working directory paths
-- **Version File**: `revision.tex` containing version macros for LaTeX
-
-Examples:
-- `v1.2.3-a1b2c3d-20241130091545-vs-v1.2.4-snapshot-e4f5g6h-20241201143022.tex`
-- `v1.2.4-snapshot-a1b2c3d-dirty-20241201143022-vs-v1.2.5-e4f5g6h-20241202120000.pdf`
-
-The timestamp format is `YYYYMMDDHHMMSS` in UTC timezone. Version naming follows the pattern:
-- Tag versions: `{tag}-{commit}-{timestamp}`
-- Non-tag versions: `{next_version}-snapshot-{commit}-{timestamp}`
-- Dirty versions: `{version}-{commit}-dirty-{timestamp}`
-- Dirty snapshots: `{next_version}-snapshot-{commit}-dirty-{timestamp}`
+- `{version}.pdf` — current version PDF
+- `{old}-vs-{new}.tex` — diff LaTeX source
+- `{old}-vs-{new}.pdf` — diff PDF
+- `metadata.json` — build metadata
+- `revision.tex` — LaTeX macros (`\GitCommit`, `\GitTag`, `\GitBranch`, `\GitRevision`, `\CompiledDate`)
 
 ## Requirements
 
 - Python 3.11+
-- Git repository
-- LaTeX installation including:
-  - XeLaTeX
-  - BibTeX
-  - latexdiff
+- Git
+- LaTeX (xelatex/pdflatex/lualatex + bibtex + latexdiff)
 
-## Example
+All dependencies are bundled in the Docker image / GitHub Action.
 
-```bash
-# In a Git repository containing LaTeX project
-cd my-latex-project
+## Project structure
 
-# Install package
-uv pip install -e /path/to/latex-builder
-
-# Build current version and generate diffs
-uv run latex-builder -v
 ```
-
-This will:
-1. Analyze current Git state
-2. Generate version information files
-3. Compile current version PDF
-4. Generate diff documents with previous commit and previous tag
-5. Output all files to `output/` directory
-
-## Architecture
-
-The package uses a modular architecture with clear separation of concerns:
-
-- **CLI Layer**: Handles command line interaction
-- **Core Logic**: Git operations, LaTeX processing, diff generation
-- **Configuration**: Centralized settings management
-- **Utilities**: Shared functionality for logging and command execution
-
-Each module can be tested independently, following Python best practices.
+latex_builder/
+├── cli.py         # click-based CLI
+├── config.py      # Config dataclass + Compiler enum
+├── revision.py    # Frozen Revision dataclass
+├── git.py         # Git operations
+├── compiler.py    # LaTeX compilation
+├── diff.py        # Diff orchestration
+├── shell.py       # Subprocess runner
+└── log.py         # Structured logging
+```
