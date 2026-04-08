@@ -71,24 +71,18 @@ class DiffGenerator:
             logger.info("Creating build directory", path=str(self.build_dir))
             self.build_dir.mkdir(parents=True, exist_ok=True)
         
-        try:
-            # Build the current version first
-            logger.info("  • Building current version")
-            self._build_current_version(current)
-        except Exception as e:
-            logger.error(f"  • Failed to build current version: {repr(e)}")
+        # Build the current version first
+        logger.info("  • Building current version")
+        self._build_current_version(current)
 
-        try:
-            # Generate and build diff files
-            logger.info("  • Generating and building diff files")
-            self._generate_and_build_diff(current, compare_revision)
-        except Exception as e:
-            logger.error(f"  • Failed to generate and build diff: {repr(e)}")
-        
+        # Generate and build diff files
+        logger.info("  • Generating and building diff files")
+        self._generate_and_build_diff(current, compare_revision)
+
         # Save metadata
         logger.info("  • Saving metadata")
         self._save_metadata(current, compare_revision)
-        
+
         logger.info("Diff generation completed successfully")
     
     def build_current_only(self, current: GitRevision) -> None:
@@ -135,24 +129,26 @@ class DiffGenerator:
             logger.info(f"Creating build directory: {self.build_dir}")
             self.build_dir.mkdir(parents=True, exist_ok=True)
         
+        # Setup checkout directories
+        checkout_dirs = self._prepare_checkout_directories(current, compare_revision)
+        playground_dir = checkout_dirs["playground"]
+
         try:
-            # Setup checkout directories
-            checkout_dirs = self._prepare_checkout_directories(current, compare_revision)
-            
             # Generate diff file with new naming convention
             diff_name = f"{compare_revision.display_name}-vs-{current.display_name}.tex"
             logger.info(f"Generating diff file: {diff_name}")
-            
+
             self.latex_processor.generate_diff(
                 checkout_dirs["compare"] / self.config.tex_file,
                 checkout_dirs["current"] / self.config.tex_file,
                 self.output_folder / diff_name
             )
-            
+
             logger.info("Diff file generated successfully")
-        except Exception as e:
-            logger.error(f"Failed to generate diff: {repr(e)}")
-            raise
+        finally:
+            import shutil
+            logger.info(f"Cleaning up playground directory: {playground_dir}")
+            shutil.rmtree(playground_dir, ignore_errors=True)
     
     def _build_current_version(self, current: GitRevision) -> None:
         """
@@ -194,17 +190,9 @@ class DiffGenerator:
         Returns:
             Dictionary mapping revision names to checkout directories
         """
-        # Create playground directory in temp directory with version info
-        temp_dir = Path(tempfile.gettempdir())
-        playground_dir = temp_dir / "latex-builder"
-        
-        logger.info(f"    - Creating playground directory: {playground_dir}")
-        if playground_dir.exists():
-            logger.info(f"    - Removing existing playground directory")
-            import shutil
-            shutil.rmtree(playground_dir)
-        
-        playground_dir.mkdir(parents=True, exist_ok=True)
+        # Create unique playground directory to avoid race conditions
+        playground_dir = Path(tempfile.mkdtemp(prefix="latex-builder-"))
+        logger.info(f"    - Created playground directory: {playground_dir}")
         
         # Setup checkout directories within playground using version names
         current_dir = playground_dir / current.display_name
@@ -231,7 +219,8 @@ class DiffGenerator:
         
         return {
             "current": current_dir,
-            "compare": compare_dir
+            "compare": compare_dir,
+            "playground": playground_dir,
         }
     
     def _run_revision_in_directory(self, revision: GitRevision, directory: Path) -> None:
@@ -260,43 +249,49 @@ class DiffGenerator:
             logger.error(f"      - Failed to generate revision file: {repr(e)}")
             raise
     
-    def _generate_and_build_diff(self, 
-                                 current: GitRevision, 
+    def _generate_and_build_diff(self,
+                                 current: GitRevision,
                                  compare_revision: GitRevision) -> None:
         """
         Generate and build diff files.
-        
+
         Args:
             current: Current Git revision
             compare_revision: Revision to compare against
         """
         # Setup checkout directories
         checkout_dirs = self._prepare_checkout_directories(current, compare_revision)
-        
-        # Generate diff file name with new naming convention
-        diff_name = f"{compare_revision.display_name}-vs-{current.display_name}.tex"
-        logger.info(f"    - Diff filename: {diff_name}")
+        playground_dir = checkout_dirs["playground"]
 
-        # Generate diff
-        logger.info(f"    - Generating diff from {compare_revision.display_name} to {current.display_name}")
-        self.latex_processor.generate_diff(
-            checkout_dirs["compare"] / self.config.tex_file,
-            checkout_dirs["current"] / self.config.tex_file,
-            checkout_dirs["compare"] / diff_name
-        )
-        
-        # Build diff document with consistent naming
-        logger.info(f"    - Building diff document")
-        diff_pdf_name = f"{compare_revision.display_name}-vs-{current.display_name}.pdf"
-        self.latex_processor.build_document(
-            diff_name, 
-            checkout_dirs["compare"], 
-            self.output_folder, 
-            diff_pdf_name,
-            self.config.compiler
-        )
-        
-        logger.info(f"    - Diff document built successfully")
+        try:
+            # Generate diff file name with new naming convention
+            diff_name = f"{compare_revision.display_name}-vs-{current.display_name}.tex"
+            logger.info(f"    - Diff filename: {diff_name}")
+
+            # Generate diff
+            logger.info(f"    - Generating diff from {compare_revision.display_name} to {current.display_name}")
+            self.latex_processor.generate_diff(
+                checkout_dirs["compare"] / self.config.tex_file,
+                checkout_dirs["current"] / self.config.tex_file,
+                checkout_dirs["compare"] / diff_name
+            )
+
+            # Build diff document with consistent naming
+            logger.info(f"    - Building diff document")
+            diff_pdf_name = f"{compare_revision.display_name}-vs-{current.display_name}.pdf"
+            self.latex_processor.build_document(
+                diff_name,
+                checkout_dirs["compare"],
+                self.output_folder,
+                diff_pdf_name,
+                self.config.compiler
+            )
+
+            logger.info(f"    - Diff document built successfully")
+        finally:
+            import shutil
+            logger.info(f"    - Cleaning up playground directory: {playground_dir}")
+            shutil.rmtree(playground_dir, ignore_errors=True)
     
     def _save_metadata(self, 
                       current: GitRevision, 

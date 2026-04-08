@@ -1,9 +1,9 @@
 """Git repository operations and utilities."""
 
-import os
 import shutil
 import time
 import datetime
+from datetime import timezone
 from pathlib import Path
 from typing import Optional, Union
 
@@ -212,30 +212,13 @@ class GitRepository:
         else:
             logger.info("  • Working tree is clean")
 
-        # Convert commit timestamp to UTC datetime
-        commit_timestamp = datetime.datetime.utcfromtimestamp(commit.authored_date)
-
-        revision = GitRevision(
-            commit_hash=commit.hexsha,
+        return self._create_revision(
+            commit,
             tag_name=tag_name,
             ref_name=ref_name,
             branch_name=branch_name,
             is_dirty=is_dirty,
-            timestamp=commit_timestamp,
-            # Additional commit details
-            author_name=commit.author.name,
-            author_email=commit.author.email,
-            commit_summary=commit.summary,
-            commit_message=commit.message,
-            commit_date=datetime.datetime.utcfromtimestamp(commit.authored_date),
-            commit_date_iso=datetime.datetime.utcfromtimestamp(commit.authored_date).isoformat(),
         )
-
-        # Generate version name
-        revision.version_name = self.generate_version_name(revision)
-        logger.info(f"  • Version name: {revision.version_name}")
-        logger.info(f"  • Display name: {revision.display_name}")
-        return revision
 
     def get_previous_commit(self) -> Optional[GitRevision]:
         """
@@ -269,28 +252,7 @@ class GitRepository:
         else:
             logger.info("  • No tags associated with parent commit")
 
-        # Convert commit timestamp to UTC datetime
-        commit_timestamp = datetime.datetime.utcfromtimestamp(previous.authored_date)
-
-        revision = GitRevision(
-            commit_hash=previous.hexsha, 
-            tag_name=tag_name,
-            timestamp=commit_timestamp,
-            # Additional commit details
-            author_name=previous.author.name,
-            author_email=previous.author.email,
-            commit_summary=previous.summary,
-            commit_message=previous.message,
-            commit_date=datetime.datetime.utcfromtimestamp(previous.authored_date),
-            commit_date_iso=datetime.datetime.utcfromtimestamp(previous.authored_date).isoformat(),
-        )
-        
-        # Generate version name
-        revision.version_name = self.generate_version_name(revision)
-        logger.info(f"  • Version name: {revision.version_name}")
-        logger.info(f"  • Display name: {revision.display_name}")
-        
-        return revision
+        return self._create_revision(previous, tag_name=tag_name)
 
     def get_previous_tag(self) -> Optional[GitRevision]:
         """
@@ -329,27 +291,7 @@ class GitRepository:
                     logger.info(
                         f"  • Selected previous tag: {tag.name} ({tag.commit.hexsha[:7]})"
                     )
-                    # Convert commit timestamp to UTC datetime
-                    commit_timestamp = datetime.datetime.utcfromtimestamp(tag.commit.authored_date)
-                    revision = GitRevision(
-                        commit_hash=tag.commit.hexsha, 
-                        tag_name=tag.name,
-                        timestamp=commit_timestamp,
-                        # Additional commit details
-                        author_name=tag.commit.author.name,
-                        author_email=tag.commit.author.email,
-                        commit_summary=tag.commit.summary,
-                        commit_message=tag.commit.message,
-                        commit_date=datetime.datetime.utcfromtimestamp(tag.commit.authored_date),
-                        commit_date_iso=datetime.datetime.utcfromtimestamp(tag.commit.authored_date).isoformat(),
-                    )
-                    
-                    # Generate version name
-                    revision.version_name = self.generate_version_name(revision)
-                    logger.info(f"  • Version name: {revision.version_name}")
-                    logger.info(f"  • Display name: {revision.display_name}")
-                    
-                    return revision
+                    return self._create_revision(tag.commit, tag_name=tag.name)
 
             # If all tags point to current commit, return None
             logger.info(
@@ -364,26 +306,7 @@ class GitRepository:
             if previous:
                 return previous
             else:
-                # Convert commit timestamp to UTC datetime
-                commit_timestamp = datetime.datetime.utcfromtimestamp(self.repo.head.commit.authored_date)
-                revision = GitRevision(
-                    commit_hash=self.repo.head.commit.hexsha,
-                    timestamp=commit_timestamp,
-                    # Additional commit details
-                    author_name=self.repo.head.commit.author.name,
-                    author_email=self.repo.head.commit.author.email,
-                    commit_summary=self.repo.head.commit.summary,
-                    commit_message=self.repo.head.commit.message,
-                    commit_date=datetime.datetime.utcfromtimestamp(self.repo.head.commit.authored_date),
-                    commit_date_iso=datetime.datetime.utcfromtimestamp(self.repo.head.commit.authored_date).isoformat(),
-                )
-                
-                # Generate version name
-                revision.version_name = self.generate_version_name(revision)
-                logger.info(f"  • Version name: {revision.version_name}")
-                logger.info(f"  • Display name: {revision.display_name}")
-                
-                return revision
+                return self._create_revision(self.repo.head.commit)
 
     def get_revision_by_ref(self, ref: str) -> Optional[GitRevision]:
         """
@@ -407,28 +330,7 @@ class GitRepository:
             if tag_name:
                 logger.info(f"  • Reference is a tag: {tag_name}")
 
-            # Convert commit timestamp to UTC datetime
-            commit_timestamp = datetime.datetime.utcfromtimestamp(commit.authored_date)
-
-            revision = GitRevision(
-                commit_hash=commit.hexsha, 
-                tag_name=tag_name,
-                timestamp=commit_timestamp,
-                # Additional commit details
-                author_name=commit.author.name,
-                author_email=commit.author.email,
-                commit_summary=commit.summary,
-                commit_message=commit.message,
-                commit_date=datetime.datetime.utcfromtimestamp(commit.authored_date),
-                commit_date_iso=datetime.datetime.utcfromtimestamp(commit.authored_date).isoformat(),
-            )
-            
-            # Generate version name
-            revision.version_name = self.generate_version_name(revision)
-            logger.info(f"  • Version name: {revision.version_name}")
-            logger.info(f"  • Display name: {revision.display_name}")
-            
-            return revision
+            return self._create_revision(commit, tag_name=tag_name)
 
         except (git.GitCommandError, git.BadName) as e:
             logger.warning(f"  • Reference '{ref}' not found: {str(e)}")
@@ -451,6 +353,47 @@ class GitRepository:
                 return tag.name
         logger.debug(f"  • No tags found for commit {commit.hexsha[:7]}")
         return None
+
+    def _create_revision(
+        self,
+        commit,
+        tag_name: Optional[str] = None,
+        ref_name: Optional[str] = None,
+        branch_name: Optional[str] = None,
+        is_dirty: bool = False,
+    ) -> GitRevision:
+        """
+        Create a GitRevision from a commit object with version name.
+
+        Args:
+            commit: Git commit object
+            tag_name: Associated tag name if any
+            ref_name: Git reference name
+            branch_name: Branch name
+            is_dirty: Whether working tree is dirty
+
+        Returns:
+            GitRevision with generated version name
+        """
+        commit_timestamp = datetime.datetime.fromtimestamp(commit.authored_date, tz=timezone.utc)
+        revision = GitRevision(
+            commit_hash=commit.hexsha,
+            tag_name=tag_name,
+            ref_name=ref_name,
+            branch_name=branch_name,
+            is_dirty=is_dirty,
+            timestamp=commit_timestamp,
+            author_name=commit.author.name,
+            author_email=commit.author.email,
+            commit_summary=commit.summary,
+            commit_message=commit.message,
+            commit_date=commit_timestamp,
+            commit_date_iso=commit_timestamp.isoformat(),
+        )
+        revision.version_name = self.generate_version_name(revision)
+        logger.info(f"  • Version name: {revision.version_name}")
+        logger.info(f"  • Display name: {revision.display_name}")
+        return revision
 
     def generate_revision_file(self, revision: GitRevision, output_path: Path) -> None:
         """
@@ -550,34 +493,22 @@ class GitRepository:
             logger.info(f"  • Copying .git from {git_dir} to {target_git_dir}")
             shutil.copytree(git_dir, target_git_dir)
 
-            # Change to target directory
-            original_cwd = os.getcwd()
-            logger.info(f"  • Current working directory: {original_cwd}")
-            logger.info(f"  • Changing to target directory: {target_dir}")
+            # Initialize repo using target_dir path directly (no os.chdir needed)
+            logger.info("  • Initializing repository in target directory")
+            repo = git.Repo(target_dir)
 
-            try:
-                os.chdir(target_dir)
+            # Reset and checkout the revision
+            logger.info("  • Resetting repository to HEAD")
+            repo.git.reset("--hard", "HEAD")
 
-                # Create a new repo object for the target directory
-                logger.info("  • Initializing repository in target directory")
-                repo = git.Repo(".")
+            logger.info(f"  • Checking out commit: {commit_hash[:7]}")
+            repo.git.checkout(commit_hash)
 
-                # Reset and checkout the revision
-                logger.info("  • Resetting repository to HEAD")
-                repo.git.reset("--hard", "HEAD")
-
-                logger.info(f"  • Checking out commit: {commit_hash[:7]}")
-                repo.git.checkout(commit_hash)
-
-                end_time = time.time()
-                duration = end_time - start_time
-                logger.info(
-                    f"  • Successfully checked out {commit_hash[:7]} (took {duration:.2f} seconds)"
-                )
-            finally:
-                # Return to original directory
-                logger.info(f"  • Returning to original directory: {original_cwd}")
-                os.chdir(original_cwd)
+            end_time = time.time()
+            duration = end_time - start_time
+            logger.info(
+                f"  • Successfully checked out {commit_hash[:7]} (took {duration:.2f} seconds)"
+            )
         except Exception as e:
             error_msg = f"Failed to checkout revision {commit_hash}: {repr(e)}"
             logger.error(f"  • {error_msg}")

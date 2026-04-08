@@ -11,15 +11,12 @@ logger = get_logger(__name__)
 
 
 def run_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) -> None:
-    """Execute shell command and return output.
+    """Execute shell command.
 
     Args:
         cmd: Command to run as list of strings
         cwd: Working directory for command execution
         timeout: Timeout in seconds (default: 5 minutes)
-
-    Returns:
-        Command output as string
 
     Raises:
         RuntimeError: If command execution fails or times out
@@ -35,13 +32,24 @@ def run_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) 
             'TEXMFVAR': '/dev/null'
         })
         
-        # 使用subprocess.run，更简单直接
-        subprocess.run(
+        result = subprocess.run(
             cmd,
             cwd=cwd,
             env=env,
-            timeout=timeout
+            timeout=timeout,
+            capture_output=True,
+            text=True,
         )
+        if result.returncode != 0:
+            logger.warning(
+                "Command exited with non-zero code",
+                command=cmd_str,
+                returncode=result.returncode,
+                stderr=result.stderr[:500] if result.stderr else "",
+            )
+            raise RuntimeError(
+                f"Command failed (exit code {result.returncode}): {cmd_str}\n{result.stderr[:500] if result.stderr else ''}"
+            )
     except subprocess.TimeoutExpired:
         logger.error("Command timed out", command=cmd_str, timeout=timeout)
         raise RuntimeError(f"Command timed out after {timeout} seconds: {cmd_str}")
@@ -50,16 +58,13 @@ def run_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) 
         raise RuntimeError(f"Command failed: {cmd_str}") from e
 
 
-def run_latex_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) -> str:
+def run_latex_command(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300) -> None:
     """Execute LaTeX command with non-interactive mode.
 
     Args:
         cmd: LaTeX command to run as list of strings
         cwd: Working directory for command execution
         timeout: Timeout in seconds (default: 5 minutes)
-
-    Returns:
-        Command output as string
 
     Raises:
         RuntimeError: If command execution fails or times out
