@@ -10,6 +10,19 @@ steps:
     with:
       fetch-depth: 0
 
+  - name: Install TeX Live
+    uses: zauguin/install-texlive@v4
+    with:
+      packages: >
+        scheme-basic
+        xetex
+        latexmk
+        bibtex
+        biber
+        latexdiff
+        collection-fontsrecommended
+        collection-latexextra
+
   - uses: wangyihang/latex-builder@v1
     id: latex
     with:
@@ -34,7 +47,6 @@ steps:
 | `timeout` | `300` | Per-command timeout (seconds) |
 | `skip-diff` | `false` | Build only, no diff |
 | `diff-only` | `false` | Diff only, no PDF build |
-| `texlive-packages` | | Extra TeXLive packages (space-separated) |
 
 ### Outputs
 
@@ -46,7 +58,7 @@ steps:
 | `diff-tex-path` | Diff .tex source |
 | `metadata-path` | `metadata.json` |
 
-> TeXLive is cached automatically. First run ~2 min, subsequent runs ~10s.
+> **Note:** TeX Live is not bundled with this action. Install it yourself using [zauguin/install-texlive](https://github.com/zauguin/install-texlive) or any other method before running this action. See the example above.
 
 ## CLI
 
@@ -73,4 +85,4 @@ latex-builder revision                       # generate revision.tex only
 
 Python 3.11+, Git, LaTeX (xelatex/pdflatex/lualatex + bibtex + latexdiff).
 
-All bundled when using the GitHub Action.
+Install TeX Live separately when using the GitHub Action (see example above).
