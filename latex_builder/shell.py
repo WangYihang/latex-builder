@@ -35,7 +35,7 @@ def run(
     cmd_str = " ".join(cmd)
     logger.debug("exec", cmd=cmd_str, cwd=str(cwd))
 
-    env = {**os.environ, "LATEX_INTERACTION": "batchmode", "TEXMFVAR": "/dev/null"}
+    env = {**os.environ, "LATEX_INTERACTION": "batchmode"}
 
     try:
         result = subprocess.run(
@@ -47,10 +47,15 @@ def run(
         raise RuntimeError(f"Command failed to start: {cmd_str}") from exc
 
     if check and result.returncode != 0:
-        stderr_preview = (result.stderr or "")[:500]
-        raise RuntimeError(
-            f"Command failed (exit {result.returncode}): {cmd_str}\n{stderr_preview}"
-        )
+        stderr_preview = (result.stderr or "").strip()
+        stdout_tail = (result.stdout or "").strip()
+        # LaTeX compilers write errors to stdout, so include both streams
+        parts = [f"Command failed (exit {result.returncode}): {cmd_str}"]
+        if stdout_tail:
+            parts.append(f"stdout (last 3000 chars):\n{stdout_tail[-3000:]}")
+        if stderr_preview:
+            parts.append(f"stderr (first 500 chars):\n{stderr_preview[:500]}")
+        raise RuntimeError("\n".join(parts))
     return result
 
 
