@@ -43,10 +43,6 @@ inputs:
     description: "Enable debug logging"
     required: false
     default: "false"
-  texlive-packages:
-    description: "Space-separated list of extra TeXLive packages to install"
-    required: false
-    default: ""
 
 outputs:
   version-name:
@@ -68,20 +64,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Install TeXLive
-      uses: zauguin/install-texlive@v3
-      with:
-        packages: >
-          scheme-basic
-          xetex
-          latexmk
-          bibtex
-          biber
-          latexdiff
-          collection-fontsrecommended
-          collection-latexextra
-          ${{ inputs.texlive-packages }}
-
     - name: Install latex-builder
       shell: bash
       run: pipx install "${{ github.action_path }}"
