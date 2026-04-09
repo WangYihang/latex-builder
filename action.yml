@@ -70,6 +70,7 @@ runs:
   steps:
     - name: Install TeXLive
       uses: zauguin/install-texlive@v3
+      continue-on-error: true
       with:
         packages: >
           scheme-basic
@@ -81,6 +82,21 @@ runs:
           collection-fontsrecommended
           collection-latexextra
           ${{ inputs.texlive-packages }}
+
+    - name: Verify TeXLive installation
+      shell: bash
+      run: |
+        missing=()
+        for tool in "${{ inputs.compiler }}" latexmk latexdiff bibtex; do
+          if ! command -v "$tool" &>/dev/null; then
+            missing+=("$tool")
+          fi
+        done
+        if [[ ${#missing[@]} -gt 0 ]]; then
+          echo "::error::Critical TeX tools not found: ${missing[*]}"
+          exit 1
+        fi
+        echo "All critical TeX tools verified successfully"
 
     - name: Install latex-builder
       shell: bash
